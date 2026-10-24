@@ -12,8 +12,8 @@ from pathlib import Path    # pathlib: libreria de Python para manejar rutas de
                             # carpetas y archivos sin preocuparse por / o \
 
 # --- Rango de fechas a extraer --------------------------------------------
-# Para la clase usamos 2026 (rapido). Para el proyecto, amplien a 2023-01-01.
-FECHA_INICIO = date(2026, 1, 1)     # primer dia que se descarga
+# EA1 pide rango de fechas a mínimo 2 años, desde el 1 de enero de 2024 hasta el 30 de septiembre de 2026
+FECHA_INICIO = date(2024, 1, 1)     # primer dia que se descarga
 FECHA_FIN = date(2026, 9, 30)       # ultimo dia que se descarga
 
 # --- Rutas (relativas a la raiz del proyecto) ------------------------------
@@ -30,9 +30,19 @@ XM_MAX_DIAS = 30                                    # la API no acepta rangos ma
 XM_METRICAS = [
     # Lista de tuplas. Cada tupla es una metrica a descargar:
     # (MetricId, Entity, periodo, nombre del archivo en bronce)
-    ("PrecBolsNaci", "Sistema", "hourly", "xm_precio_bolsa"),   # precio de bolsa por hora
-    ("DemaReal", "Sistema", "hourly", "xm_demanda"),            # demanda real por hora
-    ("PorcVoluUtilDiar", "Sistema", "daily", "xm_embalses"),    # % de embalses por dia
+
+      # Precio de bolsa por hora
+    ("PrecBolsNaci", "Sistema", "hourly", "xm_precio_bolsa"),
+    # Demanda real por hora
+    ("DemaReal", "Sistema", "hourly", "xm_demanda"),
+    # Porcentaje de embalses por día
+    ("PorcVoluUtilDiar", "Sistema", "daily", "xm_embalses"),
+    # Generación por hora de cada planta
+    ("Gene", "Recurso", "hourly", "xm_generacion_recurso"),
+    # Aportes hídricos por día
+    ("AporEner", "Sistema", "daily", "xm_aportes_hidricos"),
+    # Catálogo de plantas, sin rango de fechas
+    ("ListadoRecursos", "Sistema", "lists", "xm_listado_recursos"),
 ]
 
 # --- Fuente 2: IDEAM en datos.gov.co (API Socrata / SoQL) ------------------

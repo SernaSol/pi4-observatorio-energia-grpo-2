@@ -1,9 +1,15 @@
 """
 Fuente 2 - IDEAM en datos.gov.co (plataforma Socrata, lenguaje de consulta SoQL).
-  - El dataset tiene MILLONES de observaciones (una cada pocos minutos desde 2005)
+  
+  - Dos datasets: precipitacion (s54a-sgyg) y temperatura del aire (sbwg-7ju4)
+  - Cada uno tiene MILLONES de observaciones (una cada pocos minutos desde 2005)
   - Por eso FILTRAMOS ($where) y AGREGAMOS ($select + $group) EN EL SERVIDOR:
     viaja un resumen diario por estacion, no millones de filas
-  - Ademas paginamos con $limit / $offset por si una ventana trae muchas filas
+        precipitacion -> sum()             = lluvia total del dia
+      temperatura   -> avg(), min(), max() = media, minima y maxima del dia
+  - Paginamos con $limit / $offset por si una semana trae muchas filas
+  - Como son ~92 semanas por dataset, cada semana se guarda en una carpeta
+    temporal: si la descarga se corta, al ejecutar de nuevo continua donde iba
 Documentacion SoQL: https://dev.socrata.com/docs/queries/
 """
 # ---------------------------------------------------------------------------
@@ -11,8 +17,11 @@ Documentacion SoQL: https://dev.socrata.com/docs/queries/
 # ---------------------------------------------------------------------------
 import pandas as pd     # pandas: libreria de tablas. "as pd" le pone el nombre corto pd.
                         # Aqui se usa para convertir la lista de filas en tabla (DataFrame).
+import json             # json: leer y escribir los archivos temporales de cada semana
+import shutil
+from datetime import timedelta                      
 
-from src import config  # config.py de este proyecto: URL del IDEAM, departamento, fechas, ventana.
+from src import config  # config.py: datasets del IDEAM, departamento, fechas y ventana
 from src.utils import guardar_bronce, http_json, log, ventanas, ya_existe
 # Funciones de utils.py de este proyecto:
 #   guardar_bronce: guarda la tabla en Parquet con 3 columnas de linaje
@@ -24,27 +33,27 @@ from src.utils import guardar_bronce, http_json, log, ventanas, ya_existe
 # ---------------------------------------------------------------------------
 # CONSTANTES: valores fijos de este extractor (en MAYUSCULAS por convencion)
 # ---------------------------------------------------------------------------
-NOMBRE = "ideam_precipitacion_diaria"     # nombre del archivo en bronce
-CAMPOS = "codigoestacion, nombreestacion, municipio, latitud, longitud"   # columnas que se piden
-PAGINA = 50000                            # filas maximas por pedido ($limit)
-
-# ---------------------------------------------------------------------------
-# NOTA sobre "offset: int" o "-> dict" en las funciones:
-# son ANOTACIONES DE TIPO. Dicen que tipo de dato se espera (int = numero entero,
-# bool = verdadero/falso, dict = diccionario) y que devuelve la funcion.
-# Python no las obliga: sirven para que el codigo se entienda mejor.
-# ---------------------------------------------------------------------------
+# Columnas que describen la estacion; son iguales en los dos datasets.
+CAMPOS = "codigoestacion, nombreestacion, municipio, zonahidrografica, latitud, longitud"
+PAGINA = 50000          # filas maximas por pedido ($limit)                          # filas maximas por pedido ($limit)
 
 
-def consulta_soql(inicio, fin, offset: int) -> dict:
-    """Arma los parametros SoQL: filtrar Antioquia y fechas, y sumar la lluvia por dia."""
-    # Devuelve un diccionario {parametro: valor}. Son los mismos parametros que se
-    # escribieron a mano en la URL del navegador en la Parte 4.1.
+
+def consulta_soql(agregacion: str, inicio, fin, offset: int) -> dict:
+    """Arma los parametros SoQL: filtrar Antioquia y la semana, y resumir por estacion y dia.
+       agregacion: lo que se calcula del valor observado, por ejemplo
+                "sum(valorobservado) AS precipitacion_mm"
+    """
+
     return {
-        "$select": f"{CAMPOS}, date_trunc_ymd(fechaobservacion) AS fecha, "      # el dia
-                   f"sum(valorobservado) AS precipitacion_mm, count(*) AS n_obs",  # suma y conteo
-        "$where": f"departamento = '{config.IDEAM_DEPARTAMENTO}' AND "           # solo Antioquia
-                  f"fechaobservacion BETWEEN '{inicio}T00:00:00' AND '{fin}T23:59:59'",   # esa semana
+        "$select": f"{CAMPOS}, date_trunc_ymd(fechaobservacion) AS fecha, "   # el dia
+                   f"{agregacion}, count(*) AS n_obs",                         # resumen + conteo
+        "$where": (
+            f"departamento = '{config.IDEAM_DEPARTAMENTO}' AND "
+            f"fechaobservacion >= '{inicio}T00:00:00' AND "
+            f"fechaobservacion < '{fin + timedelta(days=1)}T00:00:00' AND "
+            "valorobservado IS NOT NULL"
+        ),  # filtra Antioquia y la semana, y descarta nulos
         "$group": f"{CAMPOS}, fecha",             # un grupo por estacion y dia
         "$order": "fecha, codigoestacion",        # ordenado por fecha y estacion
         "$limit": PAGINA,                         # filas por pagina
@@ -52,27 +61,64 @@ def consulta_soql(inicio, fin, offset: int) -> dict:
     }
 
 
+
+
+def descargar_semana(url: str, agregacion: str, inicio, fin) -> list:
+    """Pide UNA semana al servidor, pagina por pagina, y devuelve todas sus filas."""
+    filas = []
+    offset = 0                                    # empezar por la primera pagina
+    while True:                                   # paginacion: repetir hasta la ultima pagina
+        lote = http_json("GET", url, params=consulta_soql(agregacion, inicio, fin, offset))
+        filas.extend(lote)
+        if len(lote) < PAGINA:                    # llegaron menos que el limite: era la ultima
+            return filas
+        offset += PAGINA                          # pedir la pagina siguiente
+
+
+def extraer_dataset(nombre: str, url: str, agregacion: str, forzar: bool) -> None:
+    """Descarga un dataset del IDEAM semana por semana y lo guarda en bronce."""
+    if ya_existe(nombre, forzar):                 # si el Parquet final ya esta...
+        return                                    # ...no se descarga otra vez
+    # Carpeta temporal con un .json por semana: data/bronze/_tmp_<nombre>/
+    temporal = config.DIR_BRONZE / f"_tmp_{nombre}"
+    if forzar and temporal.exists():
+        shutil.rmtree(temporal)                   # --forzar: empezar de cero
+    temporal.mkdir(parents=True, exist_ok=True)
+
+    filas = []
+    for inicio, fin in ventanas(config.IDEAM_FECHA_INICIO, config.IDEAM_FECHA_FIN, config.IDEAM_DIAS_VENTANA):
+        archivo = temporal / f"{inicio}.json"
+        if archivo.exists():                      # esta semana ya se habia bajado antes
+            semana = json.loads(archivo.read_text(encoding="utf-8"))
+            estado = "ya estaba"
+        else:
+            semana = descargar_semana(url, agregacion, inicio, fin)
+            auxiliar = archivo.with_suffix(".json.part")
+            auxiliar.write_text(
+                json.dumps(semana),encoding="utf-8"
+            )  # primero escribe un .part para no dejar un .json incompleto
+            auxiliar.replace(archivo)               # renombra .part -> .json cuando termina
+            estado = "descargada"
+        filas.extend(semana)
+        log(f"   semana {inicio} a {fin}: {len(semana)} filas ({estado})")
+
+    # Todas las semanas listas: un solo Parquet en bronce y se borra lo temporal
+    guardar_bronce(pd.DataFrame(filas), nombre, fuente="IDEAM", origen=url)
+    shutil.rmtree(temporal)
+
+
+
+
+
+
 def extraer(forzar: bool = False) -> None:
-    """Descarga la lluvia diaria por estacion, semana por semana, y la guarda en bronce."""
-    # forzar: bool = False -> si no se indica nada, forzar vale False (no repetir descargas).
+    """Descarga los datasets del IDEAM definidos en config.IDEAM_DATASETS."""
+
     log("IDEAM - datos abiertos (SoQL)")
-    if ya_existe(NOMBRE, forzar):                 # si el archivo ya esta en bronce...
-        return                                    # ...termina aqui, sin descargar
-    filas = []                                    # aqui se juntan las filas de todas las semanas
-    for inicio, fin in ventanas(config.IDEAM_FECHA_INICIO, config.FECHA_FIN, config.IDEAM_DIAS_VENTANA):
-        offset = 0                                # empezar por la primera pagina
-        while True:                               # paginacion: repetir hasta la ultima pagina
-            # GET con los parametros SoQL; requests los pone en la URL despues de ?
-            # La respuesta es una lista de filas (cada fila es un diccionario).
-            lote = http_json("GET", config.IDEAM_URL, params=consulta_soql(inicio, fin, offset))
-            filas.extend(lote)                    # agrega las filas de esta pagina
-            if len(lote) < PAGINA:                # llegaron menos filas que el limite: era la ultima
-                break                             # break: sale del while
-            offset += PAGINA                      # pedir la siguiente pagina
-        log(f"   semana {inicio} a {fin}: {len(lote)} filas")
-    # pd.DataFrame(filas) convierte la lista de filas en una tabla de pandas,
-    # y guardar_bronce() la guarda en data/bronze/<NOMBRE>.parquet
-    guardar_bronce(pd.DataFrame(filas), NOMBRE, fuente="IDEAM", origen=config.IDEAM_URL)
+
+    for nombre, url, agregacion in config.IDEAM_DATASETS:
+        log(f" {nombre}")
+        extraer_dataset(nombre, url, agregacion, forzar)
 
 
 # ---------------------------------------------------------------------------

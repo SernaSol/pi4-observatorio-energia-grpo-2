@@ -76,6 +76,14 @@ NOAA_ONI_URL = "https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt"
 # --- Fuente 4: archivo interno de EnerAndes (Excel) ------------------------
 ENERANDES_EXCEL = DIR_INSUMOS / "ventas_enerandes_2023_2026.xlsx"
 
+
+# --- Fuente 5: DIVIPOLA del DANE (catalogo de municipios) ------------------
+# Datos oficiales de departamentos, municipios, codigos y coordenadas.
+# Se utilizara para relacionar geograficamente estaciones del IDEAM.
+
+DIVIPOLA_URL = "https://www.datos.gov.co/resource/gdxc-w37w.json"
+DIVIPOLA_NOMBRE = "dane_divipola"
+
 # --- Comportamiento HTTP ---------------------------------------------------
 HTTP_TIMEOUT = 120      # segundos que se espera una respuesta antes de rendirse
 HTTP_REINTENTOS = 4     # intentos ante fallas de red o del servidor

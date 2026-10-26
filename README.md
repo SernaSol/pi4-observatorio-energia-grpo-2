@@ -259,6 +259,16 @@ Se ejecutó `python -m src.extract.divipola`, obteniendo **1.122 registros y 10 
 ![Extracción y verificación del catálogo DIVIPOLA del DANE](docs/evidencias/divipola.png)
 
 
+## 🎥 Videos de los integrantes
+
+> **Pendiente de completar antes de entregar:** sustituir los textos por enlaces reales, accesibles para el docente, de los videos de cada integrante.
+
+| Integrante | Enlace al video |
+|---|---|
+| Sol Serna | [Ver presentación](https://youtu.be/bYMpWIKqmkc)|
+| Esteban Urrutia |  [Ver presentación](https://youtu.be/cPOe41iujWA) |
+
+
 ## 🤝 Trabajo colaborativo y control de versiones
 
 El equipo utiliza Git y GitHub, ramas por funcionalidad y Pull Requests para integrar cambios en `main` mediante revisión. Las bitácoras individuales se encuentran en `docs/bitacoras/`.

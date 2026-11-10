@@ -103,3 +103,119 @@ ESQUEMA_VENTAS_CONSOLIDADA = pa.DataFrameSchema(
     unique=["periodo", "divipola", "segmento", "tipo_compra"],
     strict=True,
 )
+
+
+# ---------------------------------------------------------------------------
+# ESQUEMA XM: MERCADO HORARIO
+# ---------------------------------------------------------------------------
+
+ESQUEMA_MERCADO_HORARIO = pa.DataFrameSchema(
+    {
+        # Fecha en formato AAAA-MM-DD.
+        "fecha": Column(
+            str,
+            Check.str_matches(
+                r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"
+            ),
+        ),
+
+        # XM utiliza horas del 1 al 24.
+        "hora": Column(
+            int,
+            Check.in_range(1, 24),
+        ),
+
+        # Identificadores provenientes de XM.
+        "entidad": Column(str),
+        "codigo": Column(str),
+
+        # Indicadores numericos no negativos.
+        "precio_bolsa": Column(
+            float,
+            Check.ge(0),
+        ),
+
+        "demanda": Column(
+            float,
+            Check.ge(0),
+        ),
+    },
+
+    # Una fila por fecha, hora, entidad y codigo.
+    unique=["fecha", "hora", "entidad", "codigo"],
+
+    # No permitir columnas inesperadas.
+    strict=True,
+)
+
+# ---------------------------------------------------------------------------
+# ESQUEMA XM: GENERACION HORARIA POR RECURSO
+# ---------------------------------------------------------------------------
+
+ESQUEMA_GENERACION_RECURSO = pa.DataFrameSchema(
+    {
+        # Fecha de generacion en formato AAAA-MM-DD.
+        "fecha": Column(
+            str,
+            Check.str_matches(
+                r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"
+            ),
+        ),
+
+        # XM identifica las horas del 1 al 24.
+        "hora": Column(
+            int,
+            Check.in_range(1, 24),
+        ),
+
+        # Identificacion de la planta o recurso.
+        "entidad": Column(str),
+        "codigo": Column(str, Check.str_length(min_value=1)),
+
+        # La generacion debe ser numerica y no negativa.
+        # El cero es valido.
+        "generacion": Column(
+            float,
+            Check.ge(0),
+            nullable=False,
+        ),
+    },
+
+    # Una observacion por fecha, hora y recurso.
+    unique=["fecha", "hora", "codigo"],
+
+    strict=True,
+)
+
+ESQUEMA_CATALOGO_XM = pa.DataFrameSchema(
+    {
+        "fecha_catalogo": Column(pa.DateTime),
+        "entidad": Column(str, nullable=True),
+        "codigo_recurso": Column(str, Check.str_length(min_value=1)),
+        "nombre_recurso": Column(str, Check.str_length(min_value=1)),
+        "tipo": Column(str, nullable=True),
+        "despacho": Column(str, nullable=True),
+        "tipo_recurso": Column(str, nullable=True),
+        "codigo_empresa": Column(str, nullable=True),
+        "fuente_energetica": Column(str, nullable=True),
+        "fecha_inicio_operacion": Column(pa.DateTime, nullable=True),
+        "estado": Column(str, Check.isin(["OPERACION", "PRUEBAS"])),
+    },
+    unique=["codigo_recurso"],
+    strict=True,
+)
+
+ESQUEMA_NOAA_ONI = pa.DataFrameSchema(
+    {
+        "fecha": Column(pa.DateTime),
+        "anio": Column(int),
+        "mes": Column(int, Check.in_range(1, 12)),
+        "trimestre_movil": Column(str),
+        "oni": Column(float),
+        "fase_enso": Column(
+            str, Check.isin(["El Niño", "La Niña", "Neutral"])
+        ),
+    },
+    unique=["fecha"],
+    strict=True,
+)

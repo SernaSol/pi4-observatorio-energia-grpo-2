@@ -103,3 +103,202 @@ ESQUEMA_VENTAS_CONSOLIDADA = pa.DataFrameSchema(
     unique=["periodo", "divipola", "segmento", "tipo_compra"],
     strict=True,
 )
+
+
+# ---------------------------------------------------------------------------
+# ESQUEMA XM: MERCADO HORARIO
+# ---------------------------------------------------------------------------
+
+ESQUEMA_MERCADO_HORARIO = pa.DataFrameSchema(
+    {
+        # Fecha en formato AAAA-MM-DD.
+        "fecha": Column(
+            str,
+            Check.str_matches(
+                r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"
+            ),
+        ),
+
+        # XM utiliza horas del 1 al 24.
+        "hora": Column(
+            int,
+            Check.in_range(1, 24),
+        ),
+
+        # Identificadores provenientes de XM.
+        "entidad": Column(str),
+        "codigo": Column(str),
+
+        # Indicadores numericos no negativos.
+        "precio_bolsa": Column(
+            float,
+            Check.ge(0),
+        ),
+
+        "demanda": Column(
+            float,
+            Check.ge(0),
+        ),
+    },
+
+    # Una fila por fecha, hora, entidad y codigo.
+    unique=["fecha", "hora", "entidad", "codigo"],
+
+    # No permitir columnas inesperadas.
+    strict=True,
+)
+
+# ---------------------------------------------------------------------------
+# ESQUEMA XM: GENERACION HORARIA POR RECURSO
+# ---------------------------------------------------------------------------
+
+ESQUEMA_GENERACION_RECURSO = pa.DataFrameSchema(
+    {
+        # Fecha de generacion en formato AAAA-MM-DD.
+        "fecha": Column(
+            str,
+            Check.str_matches(
+                r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"
+            ),
+        ),
+
+        # XM identifica las horas del 1 al 24.
+        "hora": Column(
+            int,
+            Check.in_range(1, 24),
+        ),
+
+        # Identificacion de la planta o recurso.
+        "entidad": Column(str),
+        "codigo": Column(str, Check.str_length(min_value=1)),
+
+        # La generacion debe ser numerica y no negativa.
+        # El cero es valido.
+        "generacion": Column(
+            float,
+            Check.ge(0),
+            nullable=False,
+        ),
+    },
+
+    # Una observacion por fecha, hora y recurso.
+    unique=["fecha", "hora", "codigo"],
+
+    strict=True,
+)
+
+ESQUEMA_CATALOGO_XM = pa.DataFrameSchema(
+    {
+        "fecha_catalogo": Column(pa.DateTime),
+        "entidad": Column(str, nullable=True),
+        "codigo_recurso": Column(str, Check.str_length(min_value=1)),
+        "nombre_recurso": Column(str, Check.str_length(min_value=1)),
+        "tipo": Column(str, nullable=True),
+        "despacho": Column(str, nullable=True),
+        "tipo_recurso": Column(str, nullable=True),
+        "codigo_empresa": Column(str, nullable=True),
+        "fuente_energetica": Column(str, nullable=True),
+        "fecha_inicio_operacion": Column(pa.DateTime, nullable=True),
+        "estado": Column(str, Check.isin(["OPERACION", "PRUEBAS"])),
+    },
+    unique=["codigo_recurso"],
+    strict=True,
+)
+
+ESQUEMA_NOAA_ONI = pa.DataFrameSchema(
+    {
+        "fecha": Column(pa.DateTime),
+        "anio": Column(int),
+        "mes": Column(int, Check.in_range(1, 12)),
+        "trimestre_movil": Column(str),
+        "oni": Column(float),
+        "fase_enso": Column(
+            str, Check.isin(["El Niño", "La Niña", "Neutral"])
+        ),
+    },
+    unique=["fecha"],
+    strict=True,
+)
+
+
+# ============================================================
+# XM: EMBALSES Y APORTES HIDRICOS
+# ============================================================
+
+ESQUEMA_XM_EMBALSES = pa.DataFrameSchema(
+    {
+        "fecha": Column(str, Check.str_matches(r"^\d{4}-\d{2}-\d{2}$")),
+        "entidad": Column(str, Check.str_length(min_value=1)),
+        "valor_embalse": Column(float, Check.in_range(0, 1)),
+    },
+    unique=["fecha", "entidad"],
+    strict=True,
+)
+
+ESQUEMA_XM_APORTES = pa.DataFrameSchema(
+    {
+        "fecha": Column(str, Check.str_matches(r"^\d{4}-\d{2}-\d{2}$")),
+        "entidad": Column(str, Check.str_length(min_value=1)),
+        "valor_aportes": Column(float, Check.ge(0)),
+    },
+    unique=["fecha", "entidad"],
+    strict=True,
+)
+
+
+# ============================================================
+# IDEAM: PRECIPITACION Y TEMPERATURA
+# ============================================================
+
+COLUMNAS_IDEAM = {
+    "codigoestacion": Column(str, Check.str_length(min_value=1)),
+    "nombreestacion": Column(str, Check.str_length(min_value=1)),
+    "municipio": Column(str, Check.str_length(min_value=1)),
+    "cod_mpio": Column(str, Check.str_matches(r"^\d{5}$")),
+    "fecha": Column(pa.DateTime),
+}
+
+ESQUEMA_IDEAM_PRECIPITACION = pa.DataFrameSchema(
+    {
+        **COLUMNAS_IDEAM,
+        "precipitacion_mm": Column(float, Check.ge(0)),
+    },
+    unique=["codigoestacion", "fecha"],
+    strict=False,
+)
+
+ESQUEMA_IDEAM_TEMPERATURA = pa.DataFrameSchema(
+    {
+        **COLUMNAS_IDEAM,
+        "temp_media_c": Column(float),
+        "temp_min_c": Column(float),
+        "temp_max_c": Column(float),
+    },
+    checks=Check(
+        lambda df: (
+            (df["temp_min_c"] <= df["temp_media_c"])
+            & (df["temp_media_c"] <= df["temp_max_c"])
+        )
+    ),
+    unique=["codigoestacion", "fecha"],
+    strict=False,
+)
+
+
+# ============================================================
+# DANE: DIVIPOLA
+# ============================================================
+
+ESQUEMA_DIVIPOLA = pa.DataFrameSchema(
+    {
+        "cod_dpto": Column(str, Check.str_matches(r"^\d{2}$")),
+        "dpto": Column(str, Check.str_length(min_value=1)),
+        "cod_mpio": Column(str, Check.str_matches(r"^\d{5}$")),
+        "nom_mpio": Column(str, Check.str_length(min_value=1)),
+        "tipo_municipio": Column(str, nullable=True),
+        "longitud": Column(float, Check.in_range(-180, 180)),
+        "latitud": Column(float, Check.in_range(-90, 90)),
+    },
+    unique=["cod_mpio"],
+    strict=True,
+)

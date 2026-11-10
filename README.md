@@ -1,291 +1,353 @@
-# Observatorio de Energía y Clima – Equipo 2
+# Observatorio de Energía y Clima — Equipo 2
 
-> Proyecto Integrado IV – Integración de Información | IU Digital de Antioquia | 2026-2
+> Proyecto Integrado IV — Integración de Información | IU Digital de Antioquia | 2026-2
 
-## 👥 Integrantes
+## Integrantes
 
-| Nombre | Usuario GitHub | Rol |
+| Integrante | GitHub | Responsabilidades |
 |---|---|---|
-| Sol Elena Serna Vargas | SernaSol| Líder técnico / Data Engineer |
-| Esteban Urrutia | estebanurrutia1 | Data Quality Analyst |
-| Sol Elena Serna Vargas | SernaSol| Analytics Engineer |
-| Esteban Urrutia | estebanurrutia1 | BI Analyst / Storyteller |
+| Sol Elena Serna Vargas | [SernaSol](https://github.com/SernaSol) | Data Engineering, arquitectura y analítica |
+| Esteban Urrutia | [estebanurrutia1](https://github.com/estebanurrutia1) | Calidad de datos, modelado BI y presentación |
 
-## 🎯 Objetivo
+## Objetivo y pregunta de negocio
 
-Integrar datos del mercado eléctrico colombiano (XM), variables climáticas (IDEAM y NOAA), datos comerciales de EnerAndes e información territorial del DANE para facilitar el estudio de las relaciones entre el clima, los recursos hídricos y el comportamiento del sector energético.
+Integrar datos del mercado eléctrico colombiano (XM), las condiciones climáticas (IDEAM y NOAA), las ventas de EnerAndes y la referencia territorial del DANE para analizar relaciones entre clima, recursos hídricos y comportamiento del sector energético.
 
-### Pregunta de negocio
+**Pregunta general:** ¿Qué relación existe entre las precipitaciones registradas en Antioquia, los niveles de los embalses y los precios de la energía eléctrica en Colombia durante 2025 y 2026?
 
-**¿Qué relación existe entre las precipitaciones registradas en Antioquia, los niveles de los embalses y los precios de la energía eléctrica en Colombia durante 2025 y 2026?**
+Las consultas desarrolladas en EA2 analizan adicionalmente las fases ENSO, las fuentes de generación y las ventas comerciales. Son **análisis descriptivos**: no establecen causalidad ni resuelven por sí solos toda la pregunta general de precipitación-embalses-precio.
 
-DIVIPOLA sirve como referencia geográfica para identificar municipios y apoyar la vinculación de estaciones del IDEAM. Las correspondencias entre fuentes deberán validarse durante la transformación de datos; no se presume una unión ya construida.
+## 1. Fuentes de datos y capa bronce (EA1)
 
-## 📦 Fuentes de datos – capa bronce
+La extracción integra cinco fuentes y produce **14 archivos Parquet** en `data/bronze/`.
 
-El pipeline integra **cinco fuentes** y, en la ejecución validada, generó **14 archivos Parquet** en `data/bronze/`.
-
-| Fuente | Acceso | Archivos de salida (`data/bronze/`) |
+| Fuente | Acceso | Archivos en `data/bronze/` |
 |---|---|---|
-| XM – Sinergox | API REST / JSON | `xm_precio_bolsa.parquet`, `xm_demanda.parquet`, `xm_embalses.parquet`, `xm_generacion_recurso.parquet`, `xm_aportes_hidricos.parquet`, `xm_listado_recursos.parquet` |
-| IDEAM – Datos Abiertos Colombia | API Socrata / consultas SoQL | `ideam_precipitacion_diaria.parquet`, `ideam_temperatura_diaria.parquet` |
-| NOAA – índice ONI | Archivo de texto | `noaa_oni.parquet` |
-| EnerAndes | Libro de Excel suministrado al equipo | `enerandes_ventas_2023.parquet`, `enerandes_ventas_2024.parquet`, `enerandes_ventas_2025.parquet`, `enerandes_ventas_2026.parquet` |
-| DANE – DIVIPOLA | API REST / JSON | `dane_divipola.parquet` |
+| XM – Sinergox | API REST / JSON | `xm_precio_bolsa`, `xm_demanda`, `xm_embalses`, `xm_generacion_recurso`, `xm_aportes_hidricos`, `xm_listado_recursos` |
+| IDEAM | API Socrata / consultas SoQL | `ideam_precipitacion_diaria`, `ideam_temperatura_diaria` |
+| NOAA | Archivo del índice ONI | `noaa_oni` |
+| EnerAndes | Excel 2023-2026 suministrado al equipo | `enerandes_ventas_2023`, `enerandes_ventas_2024`, `enerandes_ventas_2025`, `enerandes_ventas_2026` |
+| DANE / DIVIPOLA | API de datos abiertos | `dane_divipola` |
 
-### XM – información energética
+Los nombres anteriores corresponden a archivos con extensión `.parquet`.
 
-Se configuró la extracción histórica desde el **1 de enero de 2024 hasta el 30 de septiembre de 2026**, mediante consultas en ventanas de fechas cuando la métrica lo requiere. Incluye precio de bolsa, demanda real, porcentaje útil de embalses, generación por recurso, aportes hídricos y el catálogo de recursos. El catálogo `ListadoRecursos` no es una serie histórica y se obtiene mediante el servicio de listas.
+- **XM:** extracción configurada del 1 de enero de 2024 al 30 de septiembre de 2026, usando ventanas cuando corresponde. El listado de recursos es un catálogo, no una serie histórica.
+- **IDEAM:** consulta de precipitación diaria (suma) y temperatura diaria (promedio, mínimo y máximo) en Antioquia, desde el 1 de enero de 2025 hasta el 30 de septiembre de 2026. En la extracción documentada, la última fecha disponible fue el 24 de julio de 2026.
+- **NOAA:** índice ONI de [Climate Prediction Center](https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt).
+- **EnerAndes:** libro `data/insumos/ventas_enerandes_2023_2026.xlsx`, con hojas heterogéneas para 2023-2026.
+- **DANE:** DIVIPOLA obtenido de [Datos Abiertos Colombia](https://www.datos.gov.co/resource/gdxc-w37w.json), para los códigos y nombres oficiales de municipios.
 
-### IDEAM – precipitación y temperatura
+Los archivos originales se mantienen en bronce y conservan las columnas de trazabilidad `_fuente`, `_origen` y `_extraido_en`.
 
-Se configuró una consulta para **Antioquia**, desde el **1 de enero de 2025 hasta el 30 de septiembre de 2026**. Los cálculos se realizan **en el servidor** mediante SoQL y por ventanas semanales:
+## 2. Preparación del entorno y ejecución
 
-- **Precipitación diaria:** suma de `valorobservado` por estación y fecha.
-- **Temperatura diaria:** promedio, mínimo y máximo de `valorobservado` por estación y fecha.
+### Requisitos
 
-**Limitación observada:** en los archivos descargados, la última fecha disponible fue el **24 de julio de 2026** para ambas variables. El período consultado no equivale a garantizar datos publicados hasta el 30 de septiembre.
+- Python 3.11 o compatible con `requirements.txt`.
+- Git, pip y conexión a internet para la extracción desde las APIs.
+- dbt Core con el adaptador `dbt-duckdb` para la capa oro.
+- El libro Excel de EnerAndes disponible en `data/insumos/`, si no está incluido en la copia del proyecto.
 
-### NOAA – índice ONI
-
-Se conserva el contenido del archivo de texto del índice Oceanic Niño Index (ONI) en bronce, para apoyar el análisis de las condiciones climáticas asociadas con El Niño y La Niña.
-
-**Origen:** https://www.cpc.ncep.noaa.gov/data/indices/oni.ascii.txt
-
-### EnerAndes – ventas internas
-
-Se procesan las hojas del libro `ventas_enerandes_2023_2026.xlsx`, conservando su estructura en archivos separados por año. La capa bronce no realiza la estandarización de encabezados, totales ni valores.
-
-### DANE – DIVIPOLA (fuente adicional propia)
-
-**Fuente:** Departamento Administrativo Nacional de Estadística (DANE), División Político-Administrativa de Colombia.
-
-**Origen:** https://www.datos.gov.co/resource/gdxc-w37w.json
-
-**Extractor:** `src/extract/divipola.py`
-
-**Archivo de salida:** `data/bronze/dane_divipola.parquet`
-
-Se consulta un catálogo de departamentos y municipios con códigos, nombres y coordenadas geográficas. La finalidad es complementar la información del IDEAM mediante una referencia territorial oficial. En la ejecución validada se obtuvieron **1.122 registros y 10 columnas**, incluidas tres columnas de trazabilidad agregadas por el pipeline.
-
-## ⚙️ Requisitos previos
-
-- Python 3.11 o una versión compatible con `requirements.txt`.
-- `pip` y conexión a internet para consultar las fuentes públicas.
-- Git para clonar el repositorio.
-- Archivo `ventas_enerandes_2023_2026.xlsx` proporcionado por el equipo, cuando no esté disponible en el repositorio. **Sin este insumo no se puede garantizar una ejecución íntegra desde cero de la extracción de EnerAndes.**
-
-Las instrucciones siguientes están dirigidas a **Windows PowerShell** y deben ejecutarse desde la raíz del repositorio.
-
-## 🚀 Instalación y ejecución desde cero
-
-### 1. Clonar el proyecto
+Los comandos siguientes se ejecutan desde la raíz del repositorio en **Windows PowerShell**.
 
 ```powershell
+# Clonar e instalar
 git clone https://github.com/SernaSol/pi4-observatorio-energia-grpo-2.git
 cd pi4-observatorio-energia-grpo-2
-```
-
-### 2. Crear y activar un entorno virtual
-
-```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-### 3. Instalar las dependencias
-
-```powershell
 python -m pip install -r requirements.txt
-```
 
-### 4. Preparar el insumo local de EnerAndes
-
-```powershell
-New-Item -ItemType Directory -Force data/insumos
-```
-
-Copiar el libro proporcionado por el equipo a:
-
-`data/insumos/ventas_enerandes_2023_2026.xlsx`
-
-### 5. Ejecutar el pipeline de extracción
-
-```powershell
+# Extraer datos a bronce
 python -m src.pipeline
-```
 
-El pipeline llama a los extractores de **XM, IDEAM, NOAA, EnerAndes y DIVIPOLA**, y almacena los resultados en `data/bronze/`. Si un archivo ya existe, se omite su descarga.
+# Si se requiere repetir toda la descarga
+# python -m src.pipeline --forzar
 
-Para forzar una nueva extracción de todas las fuentes:
-
-```powershell
-python -m src.pipeline --forzar
-```
-
-**Importante:** el tiempo de descarga depende de la conectividad, el volumen de las consultas y la disponibilidad de las APIs. Los rangos y parámetros están definidos en `src/config.py`.
-
-### 6. Generar las muestras CSV
-
-```powershell
+# Crear muestras y perfilar bronce
 python -m src.generar_muestras
-```
-
-Se genera un CSV por Parquet en `data/sample/`, con las **primeras 200 filas** de cada archivo (o menos si la fuente tiene menos registros). En la validación realizada se generaron **14 muestras de 200 filas**.
-
-### 7. Ejecutar las pruebas automáticas
-
-```powershell
-python -m pytest -v
-```
-
-Se comprueban la división de ventanas de fechas, la detección de archivos ya descargados, el aplanamiento de respuestas JSON de XM y la construcción de consultas SoQL del IDEAM. La última ejecución documentada finalizó con **4 pruebas aprobadas**.
-
-### 8. Generar el perfilamiento de bronce
-
-```powershell
 python -m src.perfilar_datos
 ```
 
-Este script analiza los Parquet y escribe `docs/perfilamiento.md`, con cantidad de filas, columnas, tipos de dato, valores nulos, duplicados y rangos temporales. El informe revisado también incluye **cinco hallazgos de calidad con evidencia numérica**.
+El pipeline de extracción omite archivos ya descargados, salvo que se use `--forzar`. `src/perfilar_datos.py` regenera `docs/perfilamiento.md`, por lo que debe conservarse cualquier ajuste manual antes de ejecutarlo de nuevo.
 
-> **Atención:** volver a ejecutar `src.perfilar_datos` **sobrescribe** `docs/perfilamiento.md`. Si el informe incluye hallazgos y correcciones redactadas manualmente, se recomienda hacer una copia o conservar esos cambios mediante Git antes de regenerarlo.
+### Transformar de bronce a plata
 
-## 🏗️ Arquitectura
+El orden importa: **DIVIPOLA se procesa antes de IDEAM** para asociar los municipios de las estaciones.
 
-```text
-XM ────────────────┐
-IDEAM ─────────────┤
-NOAA ──────────────┤
-EnerAndes ─────────┼──► BRONCE (Parquet + linaje)
-DANE / DIVIPOLA ───┘            │
-                                ├──► Muestras CSV (data/sample/)
-                                └──► Perfilamiento (docs/perfilamiento.md)
-
-Etapas posteriores previstas:
-BRONCE ──► PLATA (limpieza y estandarización)
-       ──► ORO (modelo analítico) ──► Dashboard
+```powershell
+python -m src.silver.divipola
+python -m src.silver.enerandes
+python -m src.silver.xm
+python -m src.silver.ideam
+python -m src.silver.noaa
 ```
 
-Cada archivo bronce incorpora las columnas de trazabilidad `_fuente`, `_origen` y `_extraido_en`.
+La transformación de generación de XM trabaja por lotes y puede tardar más que las otras fuentes. Se conservan registros inválidos en archivos de cuarentena y se validan las tablas limpias con Pandera **antes de guardarlas**.
 
-## 📁 Estructura del repositorio
+```powershell
+# Pruebas automáticas de Python
+python -m pytest
+
+# Construir la capa oro y ejecutar las pruebas dbt
+dbt build --project-dir dbt --profiles-dir dbt
+```
+
+**Ejecuciones verificadas durante EA2:** 26 pruebas de Python aprobadas; una ejecución de dbt completó satisfactoriamente **9 modelos (8 tablas y una vista) y 32 pruebas** (`PASS=41`). Se agregó posteriormente la prueba de granularidad `dbt/tests/test_grano_hechos.sql`; su resultado debe comprobarse con la ejecución final del equipo.
+
+## 3. Arquitectura de datos
+
+```text
+XM -----------\
+IDEAM ---------\
+NOAA -----------+--> BRONCE (Parquet y linaje)
+EnerAndes ------/              |
+DANE ----------/               v
+                       PLATA (limpieza, Pandera, cuarentena)
+                                  |
+                                  v
+                       ORO (dbt + DuckDB)
+                                  |
+                       Consultas SQL y analisis
+```
+
+### Capa plata: resumen de la ejecución de EA2
+
+| Tabla limpia | Registros válidos | En cuarentena |
+|---|---:|---:|
+| EnerAndes: ventas consolidadas | 4.007 | 163 |
+| XM: mercado horario (precio y demanda) | 24.096 | 0 |
+| XM: generación por recurso | 5.935.449 | 2.473.215 |
+| XM: embalses | 1.004 | 0 |
+| XM: aportes hídricos | 1.004 | 0 |
+| XM: catálogo de recursos | 2.491 | 2 |
+| IDEAM: precipitación | 29.804 | 0 |
+| IDEAM: temperatura | 17.349 | 0 |
+| NOAA: ONI | 920 | 0 |
+| DANE: DIVIPOLA | 1.122 | 0 |
+| **Total de las 10 tablas** | **6.017.246** | **2.473.380** |
+
+Las cifras se refieren a filas de tablas con **granularidades diferentes**; por eso, los totales son un inventario de registros y no una medida energética agregable. Las cuarentenas se conservan para auditoría. El detalle de reglas y motivos está en [`docs/reporte_calidad.md`](docs/reporte_calidad.md), [`docs/reporte_calidad_enerandes.md`](docs/reporte_calidad_enerandes.md) y [`docs/reporte_calidad_xm_generacion.md`](docs/reporte_calidad_xm_generacion.md).
+
+### Capa oro: modelo dimensional
+
+El modelo implementa una **constelación de estrellas**: tres tablas de hechos y cinco dimensiones relacionadas directamente mediante claves.
+
+| Tipo | Modelo | Grano |
+|---|---|---|
+| Hecho | `fact_ventas_mensual` | Mes + municipio + segmento + tipo de compra |
+| Hecho | `fact_mercado_horario` | Fecha + hora + entidad + código |
+| Hecho | `fact_generacion_recurso` | Fecha + hora + recurso |
+| Dimensión | `dim_mes` | Mes |
+| Dimensión | `dim_municipio` | Municipio |
+| Dimensión | `dim_segmento` | Segmento comercial |
+| Dimensión | `dim_fecha` | Día, con fase ENSO |
+| Dimensión | `dim_recurso` | Recurso de generación |
+
+Los **10 códigos históricos** de generación ausentes en el catálogo XM se incluyen en `dim_recurso` con `en_catalogo = false`, sin inventar sus atributos y sin perder las 22.003 observaciones horarias asociadas.
+
+Documentación: [`docs/modelo_dimensional.md`](docs/modelo_dimensional.md) y [`docs/diccionario_datos.md`](docs/diccionario_datos.md). La conexión de dbt se encuentra en `dbt/profiles.yml` y utiliza `data/observatorio.duckdb`.
+
+## 4. Resultados y respuestas de negocio — EA2
+
+Se ejecutaron las tres consultas SQL de la carpeta [`consultas/oro/`](consultas/oro/) sobre la **capa oro**, y las capturas originales se guardaron en `docs/evidencias_consultas/`.
+
+### Consulta 1. ¿Cómo varían el precio de bolsa y la demanda según la fase ENSO?
+
+**Archivo:** [`01_precio_demanda_enso.sql`](consultas/oro/01_precio_demanda_enso.sql).
+
+**Resultados completos** (las cinco combinaciones de año y fase registradas):
+
+| Año | Fase ENSO | Registros horarios | Precio de bolsa promedio | Demanda promedio |
+|---|---|---:|---:|---:|
+| 2025 | La Niña | 2.208 | 222,83 | 9.650.512,14 |
+| 2025 | Neutral | 6.552 | 246,14 | 9.460.926,48 |
+| 2026 | El Niño | 2.952 | 697,38 | 10.154.755,71 |
+| 2026 | Neutral | 2.880 | 208,03 | 9.744.750,60 |
+| 2026 | Sin dato | 720 | 676,95 | 10.373.311,88 |
+
+![Salida de la consulta 1: precio, demanda y ENSO](docs/evidencias_consultas/consulta_01_enso.png)
+
+**Respuesta de negocio:** durante 2025, el precio medio de bolsa asociado con La Niña (222,83) fue menor que durante la fase Neutral (246,14). Durante 2026, El Niño presentó un precio medio de 697,38, frente a 208,03 en fase Neutral. La observación es descriptiva y **no implica causalidad**; las fases cubren intervalos diferentes del tiempo. La categoría `Sin dato` corresponde a fechas sin emparejamiento disponible con ONI.
+
+### Consulta 2. ¿Qué fuentes energéticas aportaron más generación en 2025 y 2026?
+
+**Archivo:** [`02_generacion_por_fuente.sql`](consultas/oro/02_generacion_por_fuente.sql).
+
+**Resultados completos de la captura de consola**. Los importes de la generación con notación `e+` reflejan la precisión visualizada en la terminal; los tres primeros de cada año se muestran con decimales exactos a partir de la salida adicional de verificación.
+
+| Año | Fuente energética | Cantidad Recursos | Registros horarios | Generación total|
+|---|---|---:|---:|---:|
+| 2025 | AGUA | 153 | 1.090.401 | 68.099.361.311,66 |
+| 2025 | GAS | 37 | 147.759 | 6.516.305.547,21 |
+| 2025 | RAD SOLAR | 214 | 637.571 | 4.473.803.713,71 |
+| 2025 | CARBON | 18 | 50.062 | 3,564212e+09 |
+| 2025 | BAGAZO | 14 | 99.584 | 8,852053e+08 |
+| 2025 | COMBUSTOLEO | 2 | 8.761 | 5,454459e+08 |
+| 2025 | VIENTO | 3 | 19.259 | 1,548648e+08 |
+| 2025 | ACPM | 3 | 595 | 7,822166e+07 |
+| 2025 | BIOMASA | 2 | 8.435 | 4,001184e+07 |
+| 2025 | BIOGAS | 5 | 24.504 | 2,522028e+07 |
+| 2025 | Sin informacion en catalogo | 6 | 8.403 | 2,255643e+07 |
+| 2025 | GLP | 1 | 151 | 5,851272e+06 |
+| 2025 | JET-A1 | 1 | 67 | 8,180189e+05 |
+| 2026 | AGUA | 153 | 802.259 | 47.528.319.551,89 |
+| 2026 | GAS | 36 | 100.799 | 6.700.792.138,77 |
+| 2026 | CARBON | 18 | 64.615 | 5.420.085.865,57 |
+| 2026 | RAD SOLAR | 372 | 883.947 | 5,229448e+09 |
+| 2026 | BAGAZO | 14 | 71.676 | 6,855717e+08 |
+| 2026 | COMBUSTOLEO | 3 | 7.467 | 4,277581e+08 |
+| 2026 | ACPM | 3 | 1.524 | 2,432397e+08 |
+| 2026 | VIENTO | 3 | 16.560 | 1,552257e+08 |
+| 2026 | BIOMASA | 2 | 8.806 | 6,873335e+07 |
+| 2026 | JET-A1 | 1 | 592 | 2,125990e+07 |
+| 2026 | BIOGAS | 6 | 18.806 | 1,524568e+07 |
+| 2026 | Sin informacion en catalogo | 1 | 1.253 | 4,505280e+06 |
+
+![Salida de la consulta 2: generacion por fuente energetica](docs/evidencias_consultas/consulta_02_generacion.png)
+
+**Respuesta de negocio:** AGUA ocupa la primera posición en ambos años; en 2025 la siguen GAS y RAD SOLAR, y en 2026 GAS y CARBON. Esto evidencia el peso de la generación asociada al recurso hídrico en el conjunto analizado. La unidad física exacta de `generacion` debe comprobarse contra los metadatos de XM antes de expresar sumas en MWh o GWh. El catálogo no cubre todos los recursos históricos, de ahí la categoría sin información.
+
+### Consulta 3. ¿Qué municipios y segmentos concentran las mayores ventas de EnerAndes?
+
+**Archivo:** [`03_ventas_municipio_segmento.sql`](consultas/oro/03_ventas_municipio_segmento.sql).
+
+**Resultados completos:** 10 primeras combinaciones de municipio y segmento por año. Los valores `e+` de facturación conservan el redondeo de la captura de consola; las tres primeras filas por año se recuperaron con mayor precisión de la salida de verificación.
+
+| Año | Posición | Municipio | Segmento | Meses registrados | Energía vendida (kWh) | Valor facturado (COP) |
+|---|---:|---|---|---:|---:|---:|
+| 2025 | 1 | Medellín | Residencial | 12 | 147.618.494 | 153.013.703.375 |
+| 2025 | 2 | Medellín | Industrial | 12 | 112.373.719 | 109.670.830.517 |
+| 2025 | 3 | Medellín | Comercial | 12 | 81.639.018 | 97.802.299.184 |
+| 2025 | 4 | Bello | Residencial | 12 | 38.395.670 | 3,972255e+10 |
+| 2025 | 5 | Bello | Industrial | 12 | 29.123.201 | 2,785583e+10 |
+| 2025 | 6 | Itagüí | Residencial | 12 | 28.262.920 | 2,930448e+10 |
+| 2025 | 7 | Envigado | Residencial | 12 | 25.231.477 | 2,610400e+10 |
+| 2025 | 8 | Itagüí | Industrial | 12 | 20.999.048 | 2,044197e+10 |
+| 2025 | 9 | Bello | Comercial | 12 | 19.568.466 | 2,349608e+10 |
+| 2025 | 10 | Envigado | Industrial | 12 | 18.555.979 | 1,810089e+10 |
+| 2026 | 1 | Medellín | Residencial | 9 | 115.719.258 | 129.581.551.324 |
+| 2026 | 2 | Medellín | Industrial | 9 | 85.994.552 | 90.310.434.199 |
+| 2026 | 3 | Medellín | Comercial | 9 | 62.601.897 | 80.893.758.461 |
+| 2026 | 4 | Bello | Residencial | 9 | 28.347.519 | 3,191784e+10 |
+| 2026 | 5 | Bello | Industrial | 9 | 22.130.831 | 2,337150e+10 |
+| 2026 | 6 | Itagüí | Residencial | 9 | 22.099.469 | 2,474863e+10 |
+| 2026 | 7 | Envigado | Residencial | 9 | 19.583.833 | 2,196659e+10 |
+| 2026 | 8 | Itagüí | Industrial | 9 | 16.416.485 | 1,721054e+10 |
+| 2026 | 9 | Bello | Comercial | 9 | 15.752.445 | 2,038925e+10 |
+| 2026 | 10 | Rionegro | Residencial | 9 | 14.024.237 | 1,569117e+10 |
+
+![Salida de la consulta 3: ventas por municipio y segmento](docs/evidencias_consultas/consulta_03_ventas.png)
+
+**Respuesta de negocio:** Medellín aparece en las tres primeras posiciones de los dos años, con el segmento residencial a la cabeza, seguido por el industrial y el comercial. El análisis permite priorizar segmentos y municipios para seguimiento de ventas. **No debe concluirse que las ventas disminuyeron en 2026:** la consulta compara 12 meses de 2025 frente a solo 9 meses de 2026.
+
+### Recomendaciones de interpretación
+
+1. Las comparaciones de totales de 2025 y 2026 deben ajustarse por los meses realmente observados.
+2. La clasificación ENSO proviene del ONI de NOAA asignado al mes central de cada trimestre móvil.
+3. `Sin dato` (ENSO) y `Sin informacion en catalogo` (XM) indican faltantes documentados, no valores inventados.
+4. Los resultados no prueban relaciones de causa y efecto.
+5. Para las magnitudes de XM se conservan los valores de origen; confirmar la unidad en los metadatos del indicador.
+
+### Reproducir las consultas de oro
+
+Primero, generar las tablas con `dbt build`; después, en la raíz del proyecto:
+
+```powershell
+@'
+import duckdb
+from pathlib import Path
+
+con = duckdb.connect('data/observatorio.duckdb', read_only=True)
+for ruta in sorted(Path('consultas/oro').glob('*.sql')):
+    print('\n===', ruta.name, '===')
+    print(con.execute(ruta.read_text(encoding='utf-8')).df().to_string(index=False))
+con.close()
+'@ | python -
+```
+
+## 5. Perfilamiento y evidencias
+
+- [Perfilamiento de los datos de bronce](docs/perfilamiento.md).
+- [Reporte consolidado de calidad de EA2](docs/reporte_calidad.md).
+- [Modelo dimensional y diagrama Mermaid](docs/modelo_dimensional.md).
+- [Diccionario de datos oro](docs/diccionario_datos.md).
+
+### Evidencias de ejecución de EA1
+
+Las siguientes capturas muestran ejecuciones del primer entregable (no deben confundirse con la prueba de 26 casos de EA2):
+
+![Ejecucion de la extraccion de bronce](docs/evidencias/pipeline.png)
+
+![Pruebas realizadas en EA1](docs/evidencias/pytest.png)
+
+![Generacion de muestras CSV](docs/evidencias/muestras.png)
+
+![Perfilamiento de bronce](docs/evidencias/perfilamiento.png)
+
+![Extraccion de DIVIPOLA](docs/evidencias/divipola.png)
+
+## 6. Organización del repositorio
 
 ```text
 pi4-observatorio-energia-grpo-2/
-├── data/
-│   ├── bronze/                     # Parquet generados; excluidos de Git
-│   ├── insumos/                     # Insumos locales, incluido el Excel de EnerAndes
-│   └── sample/                      # 14 muestras CSV publicables
-├── docs/
-│   ├── bitacoras/
-│   │   ├── serna_sol.md
-│   │   └── urrutia_juan_esteban.md
-│   ├── capturas/
-│   │   ├── pipeline.png
-│   │   ├── pytest.png
-│   │   ├── muestras.png
-│   │   ├── perfilamiento.png
-│   │   └── divipola.png
-│   └── perfilamiento.md
-├── src/
-│   ├── extract/
-│   │   ├── xm.py
-│   │   ├── ideam.py
-│   │   ├── noaa.py
-│   │   ├── enerandes.py
-│   │   └── divipola.py
-│   ├── config.py
-│   ├── pipeline.py
-│   ├── generar_muestras.py
-│   └── perfilar_datos.py
-├── tests/
-│   ├── test_utils.py
-│   ├── test_xm.py
-│   └── test_ideam.py
-├── .gitignore
-├── requirements.txt
-└── README.md
+|-- consultas/
+|   |-- 01_precio_vs_embalses.sql             # Analisis EA1 (bronce)
+|   |-- 02_precio_por_hora.sql               # Analisis EA1 (bronce)
+|   `-- oro/                                # 3 consultas sobre DuckDB
+|-- data/
+|   |-- bronze/                             # Datos extraidos, excluidos de Git
+|   |-- silver/                             # Datos limpios, excluidos de Git
+|   |-- insumos/                            # Libro Excel de EnerAndes
+|   `-- sample/                             # Muestras CSV del proyecto
+|-- dbt/
+|   |-- models/
+|   |   |-- staging/                        # Fuentes y vistas intermedias
+|   |   `-- marts/                          # 8 tablas dimensionales y de hechos
+|   |-- tests/                              # Unicidad del grano de hechos
+|   |-- dbt_project.yml
+|   `-- profiles.yml
+|-- docs/
+|   |-- bitacoras/                          # Bitacoras de integrantes
+|   |-- evidencias/                        # Capturas EA1
+|   |-- evidencias_consultas/              # Capturas de 3 consultas EA2
+|   |-- perfilamiento.md
+|   |-- modelo_dimensional.md
+|   |-- diccionario_datos.md
+|   |-- reporte_calidad.md
+|   |-- reporte_calidad_enerandes.md
+|   `-- reporte_calidad_xm_generacion.md
+|-- src/
+|   |-- extract/                            # Extractores de 5 fuentes
+|   |-- silver/                             # Limpieza y validacion por fuente
+|   |-- quality/esquemas.py                # Esquemas Pandera
+|   |-- config.py
+|   `-- pipeline.py
+|-- tests/                                  # Pruebas pytest (Python)
+|-- requirements.txt
+`-- README.md
 ```
 
-La estructura corresponde a los componentes desarrollados y a las carpetas de evidencia que deben incluirse en la entrega.
+## 7. Trabajo colaborativo y evidencias individuales
 
-## 📊 Calidad de datos: resultados destacados
+El equipo trabaja con Git y GitHub, ramas por funcionalidad, Pull Requests y bitácoras individuales en `docs/bitacoras/`.
 
-El detalle por columna se encuentra en [`docs/perfilamiento.md`](docs/perfilamiento.md). Entre las observaciones del conjunto de datos descargado están:
-
-| Hallazgo | Evidencia numérica | Consideración |
-|---|---|---|
-| Filas duplicadas en EnerAndes | 120 en total entre 2023 y 2026 | Verificar si son ventas repetidas, títulos o totales del Excel |
-| Valores nulos en EnerAndes | Hasta 1,44 % en `col_2` de 2023 | Interpretar columnas antes de clasificarlo como error |
-| Estructuras heterogéneas | 2024: 11 columnas; 2023, 2025 y 2026: 10 | Estandarizar en una etapa posterior |
-| Cobertura de IDEAM | Última fecha observada: 2026-07-24 | No coincide con el fin del período solicitado (2026-09-30) |
-| Catálogo XM | 2 filas duplicadas exactas en 2.493 registros | Revisar los registros antes de generar relaciones |
-
-Las observaciones de perfilamiento son **alertas de calidad**, no pruebas definitivas de errores en los sistemas de origen. Los Parquet originales se mantienen sin alteraciones.
-
-## 📸 Evidencias de ejecución en consola
-
-Las imágenes deben guardarse en `docs/capturas/` con los nombres indicados. Se incluyen como evidencia de los comandos ejecutados localmente.
-
-### 1. Pipeline de extracción
-
-Se ejecutó `python -m src.pipeline`; el resultado mostró las cinco fuentes y el resumen de los 14 archivos Parquet. **Esta captura corresponde a una ejecución que reutilizó archivos ya descargados**, no a una descarga completa desde cero.
-
-![Resumen de ejecución del pipeline con 14 archivos Parquet](docs/evidencias/pipeline.png)
-
-### 2. Pruebas automáticas
-
-Se ejecutó `python -m pytest -v`, con **4 pruebas aprobadas**.
-
-![Cuatro pruebas automáticas aprobadas con pytest](docs/evidendias/pytest.png)
-
-### 3. Generación de muestras CSV
-
-Se ejecutó `python -m src.generar_muestras`, obteniendo **14 archivos CSV de 200 filas**.
-
-![Generación de catorce muestras CSV](docs/evidencias/muestras.png)
-
-### 4. Perfilamiento de datos
-
-Se ejecutó `python -m src.perfilar_datos`, que procesó los **14 archivos Parquet** y generó `docs/perfilamiento.md`.
-
-![Ejecución del perfilamiento de los archivos Parquet](docs/evidencias/perfilamiento.png)
-
-### 5. Extracción de la fuente adicional DIVIPOLA
-
-Se ejecutó `python -m src.extract.divipola`, obteniendo **1.122 registros y 10 columnas**. Además, se verificó la estructura del Parquet con pandas.
-
-![Extracción y verificación del catálogo DIVIPOLA del DANE](docs/evidencias/divipola.png)
-
-
-## 🎥 Videos de los integrantes
-
-> **Pendiente de completar antes de entregar:** sustituir los textos por enlaces reales, accesibles para el docente, de los videos de cada integrante.
-
-| Integrante | Enlace al video |
+| Integrante | Video de presentación |
 |---|---|
-| Sol Serna | [Ver presentación](https://youtu.be/bYMpWIKqmkc)|
-| Esteban Urrutia |  [Ver presentación](https://youtu.be/cPOe41iujWA) |
+| Sol Serna | [Ver video](https://youtu.be/bYMpWIKqmkc) |
+| Esteban Urrutia | [Ver video](https://youtu.be/cPOe41iujWA) |
 
+Se debe comprobar en GitHub el cumplimiento final de commits, revisiones, PR y etiqueta de entrega EA2. Los archivos grandes de datos plata, oro y la base DuckDB **no se incluyen en Git**.
 
-## 🤝 Trabajo colaborativo y control de versiones
+## 8. Uso de inteligencia artificial y limitaciones
 
-El equipo utiliza Git y GitHub, ramas por funcionalidad y Pull Requests para integrar cambios en `main` mediante revisión. Las bitácoras individuales se encuentran en `docs/bitacoras/`.
+Se utilizó ChatGPT como apoyo para interpretar requisitos, revisar scripts, estructurar pruebas y redactar documentación técnica. Los resultados y cambios deben ser revisados, ejecutados y validados por los integrantes.
 
-La entrega requiere verificar para cada integrante los commits propios, la participación en PR aprobados y las evidencias del trabajo individual. El estado final de esos requisitos debe comprobarse en GitHub.
+**Limitaciones conocidas:**
 
-`data/bronze/`, `data/silver/` y `data/gold/` están excluidos por `.gitignore`; las muestras de `data/sample/` sí deben publicarse. Verificar los archivos preparados antes de cada commit.
-
-## 🤖 Uso de herramientas de inteligencia artificial
-
-Se utilizó ChatGPT como apoyo en la interpretación de requisitos, la revisión de scripts de extracción, el diseño de pruebas automáticas y la redacción de documentación técnica. El equipo debe revisar, ejecutar y validar los cambios antes de integrarlos al repositorio.
-
-## ⚠️ Limitaciones conocidas
-
-- La disponibilidad de datos IDEAM depende de las publicaciones de los conjuntos consultados y de los filtros aplicados.
-- El Excel original de EnerAndes debe estar disponible localmente para una reproducción desde cero.
-- Algunas fechas y mediciones se conservan como texto en bronce, de acuerdo con el objetivo de preservar los datos originales.
-- La vinculación entre municipios de DIVIPOLA y estaciones del IDEAM requiere estandarización y validación.
-- Una ejecución con datos existentes no demuestra, por sí sola, la reproducibilidad íntegra desde un repositorio limpio.
-- La capa plata, la capa oro y el dashboard se consideran etapas posteriores, no resultados ya implementados.
+- La disponibilidad de datos del IDEAM depende de las publicaciones y filtros de sus fuentes.
+- El Excel de EnerAndes debe estar accesible para reproducir la extracción completa.
+- Las unidades de algunas métricas XM requieren validación en los metadatos originales.
+- La dimensión recurso incluye códigos históricos sin descripción en el catálogo.
+- Las relaciones entre precipitación, embalses y precios aún requieren análisis específicos para responder integralmente la pregunta general.
+- Una ejecución con datos ya presentes no demuestra por sí sola la reproducción desde una clonación limpia.

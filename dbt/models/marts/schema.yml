@@ -73,3 +73,68 @@ models:
           - accepted_values:
               arguments:
                 values: ["Bolsa", "Contrato"]
+
+
+  # DIMENSION FECHA
+  - name: dim_fecha
+    description: "Calendario diario con fase ENSO."
+    columns:
+      - name: fecha_id
+        data_tests: [unique, not_null]
+      - name: fecha
+        data_tests: [unique, not_null]
+      - name: fase_enso
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["El Niño", "La Niña", "Neutral", "Sin dato"]
+
+  # DIMENSION RECURSO
+  - name: dim_recurso
+    description: "Catalogo de plantas y recursos de XM."
+    columns:
+      - name: recurso_id
+        data_tests: [unique, not_null]
+      - name: nombre_recurso
+        data_tests: [not_null]
+
+  # HECHOS: MERCADO HORARIO
+  - name: fact_mercado_horario
+    description: "Precio de bolsa y demanda por fecha y hora."
+    columns:
+      - name: fecha_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: fecha_id
+      - name: hora
+        data_tests: [not_null]
+      - name: precio_bolsa
+        data_tests: [not_null]
+      - name: demanda
+        data_tests: [not_null]
+
+  # HECHOS: GENERACION POR RECURSO
+  - name: fact_generacion_recurso
+    description: "Generacion electrica horaria por recurso XM."
+    columns:
+      - name: fecha_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_fecha')
+                field: fecha_id
+      - name: recurso_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_recurso')
+                field: recurso_id
+      - name: hora
+        data_tests: [not_null]
+      - name: generacion
+        data_tests: [not_null]

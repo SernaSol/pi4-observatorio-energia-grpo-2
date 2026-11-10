@@ -1,17 +1,49 @@
-# Reporte de calidad: ventas de EnerAndes (hoja 2023)
+# Reporte de calidad - Capa plata
 
-- Filas en bronce: 1,114
-- Filas en plata: 1,064
-- Filas en cuarentena: 16
+## Fuente: EnerAndes (2023-2026)
 
-| # | Problema | Regla aplicada | Antes | Despues |
-|---|---|---|---|---|
-| 1 | Encabezado guardado como una fila | Usarlo como nombres de columna | 1 | 0 |
-| 2 | Filas de totales | Eliminarlas | 1 | 0 |
-| 3 | Filas duplicadas | Dejar una sola copia | 32 | 0 |
-| 4 | Segmento escrito de varias formas | Unificar a 3 valores | 6 | 3 |
-| 5 | Segmento vacio | Marcarlo como 'No informado' | 14 | 0 |
-| 6 | Tipo de compra escrito de varias formas | Unificar a Bolsa y Contrato | 4 | 2 |
-| 7 | Municipio escrito de varias formas | Unificar con el codigo DIVIPOLA | 31 | 15 |
-| 8 | Energia vacia o negativa | Pasar la fila a cuarentena | 16 | 0 |
-| 9 | Valor facturado vacio | Dejarlo vacio y documentarlo | 7 | 7 |
+- Registros de ventas procesados: 4170
+- Registros limpios: 4007
+- Registros en cuarentena: 163
+- Filas TOTAL excluidas: 4
+
+### Resultado por año
+
+| Año | Entrada | Limpias | Cuarentena | TOTAL excluidas |
+|---|---:|---:|---:|---:|
+| 2023 | 1112 | 1064 | 48 | 1 |
+| 2024 | 1112 | 1071 | 41 | 1 |
+| 2025 | 1112 | 1071 | 41 | 1 |
+| 2026 | 834 | 801 | 33 | 1 |
+
+### Reglas de calidad: antes y después
+
+| Problema | Antes | Después | Regla aplicada |
+|---|---:|---:|---|
+| Filas TOTAL | 4 | 0 | Excluir filas de resumen que no representan ventas |
+| Duplicados normalizados | 120 | 0 | Conservar primera aparición y registrar copias en cuarentena |
+| Energía vacía o negativa | 45 | 0 | Enviar registros inválidos a cuarentena |
+| Valor facturado vacío | 29 | 28 | Conservar el valor nulo sin inventar información |
+| Segmento no informado | 29 | 28 | Conservar categoría No informado |
+
+### Transformaciones aplicadas
+
+- Unificación de encabezados de los cuatro años.
+- Normalización de fechas al formato AAAA-MM.
+- Conversión de MWh a kWh.
+- Estandarización de municipios y códigos DIVIPOLA.
+- Normalización de segmentos y tipos de compra.
+- Conversión de valores numéricos.
+- Validación de las 14 columnas con Pandera.
+
+### Motivos de cuarentena
+
+| Motivo | Registros |
+|---|---:|
+| Registro duplicado | 118 |
+| Energia vacia o no numerica | 25 |
+| Energia negativa | 18 |
+| Registro duplicado; Energia vacia o no numerica | 2 |
+
+Nota: un registro puede tener varios motivos de cuarentena.
+Las filas TOTAL se excluyen porque son resúmenes, no ventas.

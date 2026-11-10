@@ -24,6 +24,8 @@ from src import config                           # rutas de las carpetas
 from src.quality.esquemas import ESQUEMA_VENTAS  # las reglas que debe cumplir la tabla limpia
 from src.utils import log                        # mensajes con hora
 
+import re
+
 LINAJE = ["_fuente", "_origen", "_extraido_en"]  # columnas que agrego guardar_bronce()
 
 # Encabezados de la hoja 2023 -> nombres estandar de la capa plata
@@ -69,6 +71,87 @@ SEGMENTOS = {"residencial": "Residencial", "resid.": "Residencial",
 TIPOS_COMPRA = {"bolsa": "Bolsa", "contrato": "Contrato", "contratos": "Contrato"}
 
 
+
+
+def preparar_hoja(bronce: pd.DataFrame, anio: int) -> pd.DataFrame:
+    """
+    Prepara las hojas de EnerAndes de 2023 a 2026.
+
+    Elimina las filas iniciales de encabezados y notas,
+    selecciona las columnas de ventas y unifica sus nombres.
+
+    No modifica los datos originales de bronce.
+    """
+
+    # Trabajar sobre una copia sin las columnas de linaje.
+    df = bronce.drop(columns=LINAJE, errors="ignore").copy()
+
+    # Cada hoja tiene un encabezado diferente.
+    configuracion = {
+        2023: {
+            "fila_inicio": 1,
+            "columnas": [
+                "periodo", "municipio", "segmento",
+                "tipo_compra", "energia_kwh",
+                "valor_cop", "clientes"
+            ],
+        },
+        2024: {
+            "fila_inicio": 1,
+            "columnas": [
+                "periodo", "municipio", "segmento",
+                "tipo_compra", "energia_kwh",
+                "unidad", "valor_cop", "clientes"
+            ],
+        },
+        2025: {
+            "fila_inicio": 4,
+            "columnas": [
+                "periodo", "municipio", "segmento",
+                "tipo_compra", "energia_kwh",
+                "valor_cop", "clientes"
+            ],
+        },
+        2026: {
+            "fila_inicio": 4,
+            "columnas": [
+                "periodo", "municipio", "segmento",
+                "tipo_compra", "energia_kwh",
+                "valor_cop", "clientes"
+            ],
+        },
+    }
+
+    if anio not in configuracion:
+        raise ValueError(f"Año no soportado: {anio}")
+
+    datos = configuracion[anio]
+    columnas = datos["columnas"]
+
+    # Verificar que existan suficientes columnas.
+    if df.shape[1] < len(columnas):
+        raise ValueError(
+            f"EnerAndes {anio}: se esperaban "
+            f"{len(columnas)} columnas y hay {df.shape[1]}"
+        )
+
+    # Omitir títulos, notas y encabezados.
+    df = df.iloc[datos["fila_inicio"]:, :len(columnas)].copy()
+
+    # Asignar los nombres estándar.
+    df.columns = columnas
+
+    # Las demás hojas ya expresan su energía en kWh.
+    if anio != 2024:
+        df["unidad"] = "kWh"
+
+    # Guardar el año de procedencia para el reporte.
+    df["anio_origen"] = anio
+
+    return df.reset_index(drop=True)
+
+
+
 # ---------------------------------------------------------------------------
 # FUNCIONES DE APOYO
 # ---------------------------------------------------------------------------
@@ -95,6 +178,313 @@ def clave_municipio(texto) -> str | None:
     # si la encuentra ('rio negro'), devuelve su valor ('rionegro');
     # si no la encuentra ('bello'), devuelve la misma clave ('bello')
     return ALIAS_MUNICIPIO.get(clave, clave)
+
+
+
+def normalizar_periodo(valor) -> str | None:
+    """
+    Convierte las fechas de EnerAndes al formato YYYY-MM.
+
+    Ejemplos:
+        2023-04    -> 2023-04
+        jun-24     -> 2024-06
+        09/2024    -> 2024-09
+        06/2025    -> 2025-06
+        01/03/2026 -> 2026-03
+    """
+    if pd.isna(valor):
+        return None
+
+    texto = str(valor).strip().lower()
+
+    meses = {
+    # Meses en español
+    "ene": 1, "feb": 2, "mar": 3,
+    "abr": 4, "may": 5, "jun": 6,
+    "jul": 7, "ago": 8, "sep": 9,
+    "oct": 10, "nov": 11, "dic": 12,
+
+    # Meses en inglés
+    "jan": 1, "apr": 4, "aug": 8, "dec": 12,
+}
+
+    # Formato YYYY-MM.
+    m = re.fullmatch(r"(\d{4})-(\d{1,2})", texto)
+    if m:
+        anio, mes = map(int, m.groups())
+        if 1 <= mes <= 12:
+            return f"{anio:04d}-{mes:02d}"
+
+    # Formato mes abreviado-YY.
+    m = re.fullmatch(r"([a-z]{3})-(\d{2})", texto)
+    if m:
+        mes_txt, anio = m.groups()
+        if mes_txt in meses:
+            return f"{2000 + int(anio):04d}-{meses[mes_txt]:02d}"
+
+    # Formato MM/YYYY.
+    m = re.fullmatch(r"(\d{1,2})/(\d{4})", texto)
+    if m:
+        mes, anio = map(int, m.groups())
+        if 1 <= mes <= 12:
+            return f"{anio:04d}-{mes:02d}"
+
+    # Formato DD/MM/YYYY.
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{4})", texto)
+    if m:
+        dia, mes, anio = map(int, m.groups())
+        try:
+            fecha = pd.Timestamp(year=anio, month=mes, day=dia)
+            return fecha.strftime("%Y-%m")
+        except ValueError:
+            return None
+
+    return None
+
+
+
+def normalizar_fechas_y_energia(preparado: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza las fechas y convierte toda la energia a kWh.
+    Conserva la unidad original para poder auditar los cambios.
+    """
+    df = preparado.copy()
+
+    # Normalizar las fechas de los cuatro años.
+    df["periodo"] = df["periodo"].map(normalizar_periodo)
+
+    # Conservar la unidad original como evidencia.
+    df["unidad_origen"] = df["unidad"]
+
+    # Convertir la energía de texto a número.
+    df["energia_kwh"] = pd.to_numeric(
+        df["energia_kwh"], errors="coerce"
+    )
+
+    # Estandarizar las unidades.
+    unidades = df["unidad"].astype("string").str.strip().str.lower()
+
+    # kWh no cambia; MWh se multiplica por 1000.
+    factores = unidades.map({
+        "kwh": 1.0,
+        "mwh": 1000.0,
+    })
+
+    df["energia_kwh"] = df["energia_kwh"] * factores
+
+    # Indicar que la energía ya está expresada en kWh.
+    # Las unidades desconocidas quedan vacías para revisarlas.
+    df["unidad"] = unidades.map({
+        "kwh": "kWh",
+        "mwh": "kWh",
+    })
+
+    return df
+
+
+def normalizar_municipios(preparado: pd.DataFrame) -> pd.DataFrame:
+    """
+    Unifica los nombres de municipios y asigna su codigo DIVIPOLA.
+    Conserva el nombre original para facilitar la auditoria.
+    """
+    df = preparado.copy()
+
+    # Guardar el municipio tal como llego en el Excel.
+    df["municipio_origen"] = df["municipio"]
+
+    # Corregir tildes, espacios, mayusculas y alias.
+    claves = df["municipio"].map(clave_municipio)
+
+    # Buscar el codigo DIVIPOLA y el nombre estandar.
+    # Los desconocidos quedan vacios para enviarlos a cuarentena.
+    df["divipola"] = claves.map(
+        lambda c: MUNICIPIOS[c][0] if c in MUNICIPIOS else None
+    )
+
+    df["municipio"] = claves.map(
+        lambda c: MUNICIPIOS[c][1] if c in MUNICIPIOS else None
+    )
+
+    return df
+
+
+
+def normalizar_categorias(preparado: pd.DataFrame) -> pd.DataFrame:
+    """
+    Normaliza segmentos y tipos de compra.
+    Conserva los valores originales para auditoria.
+    """
+    df = preparado.copy()
+
+    df["segmento_origen"] = df["segmento"]
+    df["tipo_compra_origen"] = df["tipo_compra"]
+
+    # Unificar segmentos.
+    def limpiar_segmento(valor):
+        if pd.isna(valor):
+            return "No informado"
+
+        clave = sin_tildes(str(valor))
+        return SEGMENTOS.get(clave, "No informado")
+
+    df["segmento"] = df["segmento"].map(limpiar_segmento)
+
+    # Unificar tipos de compra.
+    def limpiar_tipo(valor):
+        if pd.isna(valor):
+            return None
+
+        clave = sin_tildes(str(valor))
+        return TIPOS_COMPRA.get(clave)
+
+    df["tipo_compra"] = df["tipo_compra"].map(limpiar_tipo)
+
+    return df
+
+
+def separar_calidad(preparado: pd.DataFrame):
+    """
+    Separa registros validos y registros en cuarentena.
+    No elimina informacion sin dejar trazabilidad.
+    """
+    df = preparado.copy()
+
+    # Convertir columnas numericas.
+    for columna in ["energia_kwh", "valor_cop", "clientes"]:
+        df[columna] = pd.to_numeric(
+            df[columna], errors="coerce"
+        )
+
+    # Identificar duplicados despues de normalizar.
+    columnas_clave = [
+        "periodo",
+        "divipola",
+        "segmento",
+        "tipo_compra",
+        "energia_kwh",
+        "valor_cop",
+        "clientes",
+    ]
+
+    duplicados = df.duplicated(
+        subset=columnas_clave,
+        keep="first"
+    )
+
+    # Registrar todos los motivos de cuarentena.
+    motivos = []
+
+    for indice, fila in df.iterrows():
+        causas = []
+
+        if duplicados.loc[indice]:
+            causas.append("Registro duplicado")
+
+        if pd.isna(fila["periodo"]):
+            causas.append("Periodo invalido")
+
+        if pd.isna(fila["divipola"]):
+            causas.append("Municipio sin DIVIPOLA")
+
+        if pd.isna(fila["tipo_compra"]):
+            causas.append("Tipo de compra desconocido")
+
+        if pd.isna(fila["energia_kwh"]):
+            causas.append("Energia vacia o no numerica")
+        elif fila["energia_kwh"] < 0:
+            causas.append("Energia negativa")
+
+        if pd.isna(fila["clientes"]):
+            causas.append("Clientes vacios o no numericos")
+        elif fila["clientes"] < 0:
+            causas.append("Clientes negativos")
+
+        if pd.notna(fila["valor_cop"]) and fila["valor_cop"] < 0:
+            causas.append("Valor facturado negativo")
+
+        motivos.append("; ".join(causas))
+
+    df["motivo_cuarentena"] = motivos
+
+    # Separar registros.
+    mascara_cuarentena = df["motivo_cuarentena"] != ""
+
+    cuarentena = df.loc[mascara_cuarentena].copy()
+
+    limpias = df.loc[~mascara_cuarentena].copy()
+    limpias = limpias.drop(columns=["motivo_cuarentena"])
+
+    metricas = {
+        "filas_entrada": len(df),
+        "filas_limpias": len(limpias),
+        "filas_cuarentena": len(cuarentena),
+        "duplicados": int(duplicados.sum()),
+        "energia_invalida": int(
+            df["energia_kwh"].isna().sum()
+            + (df["energia_kwh"] < 0).sum()
+        ),
+        "valor_cop_vacio": int(df["valor_cop"].isna().sum()),
+        "segmento_no_informado": int(
+            (df["segmento"] == "No informado").sum()
+        ),
+    }
+
+    return limpias, cuarentena, metricas
+
+
+
+def consolidar_ventas():
+    """
+    Consolida las ventas EnerAndes de 2023 a 2026.
+    Retorna una tabla limpia, una cuarentena y metricas por año.
+    """
+    tablas_limpias = []
+    tablas_cuarentena = []
+    metricas_por_anio = []
+
+    for anio in range(2023, 2027):
+        ruta = config.DIR_BRONZE / f"enerandes_ventas_{anio}.parquet"
+        bronce = pd.read_parquet(ruta)
+
+        # Unificar encabezados de cada año.
+        df = preparar_hoja(bronce, anio)
+
+        # Retirar las filas de resumen, no transaccionales.
+        es_total = (
+            df["periodo"].astype(str).str.strip().str.upper()
+            == "TOTAL"
+        )
+        filas_total = int(es_total.sum())
+        df = df.loc[~es_total].copy()
+
+        # Aplicar las transformaciones validadas.
+        df = normalizar_fechas_y_energia(df)
+        df = normalizar_municipios(df)
+        df = normalizar_categorias(df)
+
+        # Separar registros validos y cuarentena.
+        limpias, cuarentena, metricas = separar_calidad(df)
+
+        metricas["anio"] = anio
+        metricas["filas_total_excluidas"] = filas_total
+
+        tablas_limpias.append(limpias)
+        tablas_cuarentena.append(cuarentena)
+        metricas_por_anio.append(metricas)
+
+    # Construir las dos tablas consolidadas.
+    ventas_plata = pd.concat(
+        tablas_limpias, ignore_index=True
+    )
+
+    ventas_cuarentena = pd.concat(
+        tablas_cuarentena, ignore_index=True
+    )
+
+    return ventas_plata, ventas_cuarentena, metricas_por_anio
+
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -320,41 +710,185 @@ def escribir_reporte(metricas: list[dict], filas_bronce: int, filas_plata: int, 
     (config.DIR_DOCS / "reporte_calidad.md").write_text("\n".join(lineas) + "\n", encoding="utf-8")
 
 
+def escribir_reporte_consolidado(ventas, cuarentena, metricas):
+    """Genera el reporte de calidad de EnerAndes 2023-2026."""
+
+    total_entrada = sum(m["filas_entrada"] for m in metricas)
+    total_totales = sum(
+        m["filas_total_excluidas"] for m in metricas
+    )
+
+    lineas = [
+        "# Reporte de calidad - Capa plata",
+        "",
+        "## Fuente: EnerAndes (2023-2026)",
+        "",
+        f"- Registros de ventas procesados: {total_entrada}",
+        f"- Registros limpios: {len(ventas)}",
+        f"- Registros en cuarentena: {len(cuarentena)}",
+        f"- Filas TOTAL excluidas: {total_totales}",
+        "",
+        "### Resultado por año",
+        "",
+        "| Año | Entrada | Limpias | Cuarentena | TOTAL excluidas |",
+        "|---|---:|---:|---:|---:|",
+    ]
+
+    for m in metricas:
+        lineas.append(
+            f"| {m['anio']} "
+            f"| {m['filas_entrada']} "
+            f"| {m['filas_limpias']} "
+            f"| {m['filas_cuarentena']} "
+            f"| {m['filas_total_excluidas']} |"
+        )
+
+    lineas.extend([
+        "",
+        "### Reglas de calidad: antes y después",
+        "",
+        "| Problema | Antes | Después | Regla aplicada |",
+        "|---|---:|---:|---|",
+    ])
+
+    reglas = [
+        (
+            "Filas TOTAL",
+            total_totales,
+            0,
+            "Excluir filas de resumen que no representan ventas",
+        ),
+        (
+            "Duplicados normalizados",
+            sum(m["duplicados"] for m in metricas),
+            0,
+            "Conservar primera aparición y registrar copias en cuarentena",
+        ),
+        (
+            "Energía vacía o negativa",
+            sum(m["energia_invalida"] for m in metricas),
+            int(
+                ventas["energia_kwh"].isna().sum()
+                + (ventas["energia_kwh"] < 0).sum()
+            ),
+            "Enviar registros inválidos a cuarentena",
+        ),
+        (
+            "Valor facturado vacío",
+            sum(m["valor_cop_vacio"] for m in metricas),
+            int(ventas["valor_cop"].isna().sum()),
+            "Conservar el valor nulo sin inventar información",
+        ),
+        (
+            "Segmento no informado",
+            sum(m["segmento_no_informado"] for m in metricas),
+            int((ventas["segmento"] == "No informado").sum()),
+            "Conservar categoría No informado",
+        ),
+    ]
+
+    for problema, antes, despues, regla in reglas:
+        lineas.append(
+            f"| {problema} | {antes} | {despues} | {regla} |"
+        )
+
+    lineas.extend([
+        "",
+        "### Transformaciones aplicadas",
+        "",
+        "- Unificación de encabezados de los cuatro años.",
+        "- Normalización de fechas al formato AAAA-MM.",
+        "- Conversión de MWh a kWh.",
+        "- Estandarización de municipios y códigos DIVIPOLA.",
+        "- Normalización de segmentos y tipos de compra.",
+        "- Conversión de valores numéricos.",
+        "- Validación de las 14 columnas con Pandera.",
+        "",
+        "### Motivos de cuarentena",
+        "",
+        "| Motivo | Registros |",
+        "|---|---:|",
+    ])
+
+    motivos = cuarentena["motivo_cuarentena"].value_counts()
+
+    for motivo, cantidad in motivos.items():
+        lineas.append(f"| {motivo} | {cantidad} |")
+
+    lineas.extend([
+        "",
+        "Nota: un registro puede tener varios motivos de cuarentena.",
+        "Las filas TOTAL se excluyen porque son resúmenes, no ventas.",
+        "",
+    ])
+
+    config.DIR_DOCS.mkdir(parents=True, exist_ok=True)
+
+    ruta = config.DIR_DOCS / "reporte_calidad.md"
+    ruta.write_text("\n".join(lineas), encoding="utf-8")
+
+
+
+
+
+
 # ---------------------------------------------------------------------------
 # PROGRAMA PRINCIPAL
 # ---------------------------------------------------------------------------
+
 def main() -> None:
-    # Lee el archivo Parquet de bronce y lo guarda en la tabla bronce
-    bronce = pd.read_parquet(config.DIR_BRONZE / "enerandes_ventas_2023.parquet")
-    # len(bronce) es el numero de filas; log lo muestra con la hora
-    log(f"Bronce: {len(bronce):,} filas")
-    # Llama a limpiar(); como devuelve tres cosas, se reciben en tres variables
-    limpias, cuarentena, metricas = limpiar(bronce)
+    """Ejecuta la limpieza completa de EnerAndes 2023-2026."""
 
-    # Revisa la tabla limpia con las reglas de pandera.
-    # Si una regla falla, el programa se detiene aqui y no guarda nada;
-    # lazy=True: revisa todo y muestra TODOS los errores juntos
-    ESQUEMA_VENTAS.validate(limpias, lazy=True)
-    # Si llego a esta linea, la tabla cumplio todas las reglas
-    log("Validacion con pandera: OK")
+    from src.quality.esquemas import ESQUEMA_VENTAS_CONSOLIDADA
 
-    # Crea la carpeta data/silver/ si no existe
+    log("Iniciando limpieza de EnerAndes 2023-2026")
+
+    # 1. Leer, limpiar y consolidar los cuatro años.
+    ventas, cuarentena, metricas = consolidar_ventas()
+
+    # 2. Preparar tipos numéricos para Pandera.
+    ventas = ventas.copy()
+    ventas["energia_kwh"] = ventas["energia_kwh"].astype("float64")
+    ventas["valor_cop"] = ventas["valor_cop"].astype("float64")
+    ventas["clientes"] = ventas["clientes"].astype("int64")
+
+    # 3. Verificar que todos los registros estén contabilizados.
+    total_procesado = sum(m["filas_entrada"] for m in metricas)
+
+    if len(ventas) + len(cuarentena) != total_procesado:
+        raise ValueError(
+            "La consolidacion perdio registros durante la limpieza"
+        )
+
+    # 4. Validar antes de guardar.
+    ESQUEMA_VENTAS_CONSOLIDADA.validate(ventas, lazy=True)
+
+    log("Validacion Pandera: OK")
+
+    # 5. Guardar archivos Parquet de la capa plata.
     config.DIR_SILVER.mkdir(parents=True, exist_ok=True)
-    # .to_parquet guarda la tabla en un archivo Parquet;
-    # index=False: no guarda la columna de numeros de fila
-    limpias.to_parquet(config.DIR_SILVER / "enerandes_ventas.parquet", index=False)
-    cuarentena.to_parquet(config.DIR_SILVER / "enerandes_cuarentena.parquet", index=False)
-    # Escribe docs/reporte_calidad.md
-    escribir_reporte(metricas, len(bronce), len(limpias), len(cuarentena))
 
-    # Muestra la tabla de metricas en la terminal, alineada en columnas:
-    # :<42 ocupa 42 espacios alineado a la izquierda; :>7 ocupa 7 alineado a la derecha
-    print(f"   {'problema':<42}{'antes':>7}{'despues':>9}")
-    # Una linea por cada regla
-    for m in metricas:
-        print(f"   {m['problema']:<42}{m['antes']:>7}{m['despues']:>9}")
-    log(f"Plata: {len(limpias):,} filas limpias y {len(cuarentena)} en cuarentena")
-    log("Reporte en docs/reporte_calidad.md")
+    ruta_ventas = config.DIR_SILVER / "enerandes_ventas.parquet"
+    ruta_cuarentena = (
+        config.DIR_SILVER / "enerandes_cuarentena.parquet"
+    )
+
+    ventas.to_parquet(ruta_ventas, index=False)
+    cuarentena.to_parquet(ruta_cuarentena, index=False)
+
+    # 6. Generar reporte de calidad.
+    escribir_reporte_consolidado(
+        ventas, cuarentena, metricas
+    )
+
+    # 7. Mostrar resumen.
+    log(f"Ventas limpias: {len(ventas)}")
+    log(f"Registros en cuarentena: {len(cuarentena)}")
+    log(f"Total procesado: {total_procesado}")
+    log(f"Archivo plata: {ruta_ventas}")
+    log(f"Archivo cuarentena: {ruta_cuarentena}")
+    log("Reporte generado: docs/reporte_calidad.md")
+
 
 
 # __name__ vale "__main__" solo cuando se ejecuta este archivo

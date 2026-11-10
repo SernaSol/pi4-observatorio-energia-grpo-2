@@ -73,3 +73,33 @@ ESQUEMA_VENTAS = pa.DataFrameSchema(
     # strict=True: la tabla no puede traer columnas que no esten en este esquema
     strict=True,
 )
+
+
+
+# ---------------------------------------------------------------------------
+# ESQUEMA DE VENTAS CONSOLIDADAS: 2023-2026
+# ---------------------------------------------------------------------------
+# Conserva las reglas originales y agrega columnas de trazabilidad.
+
+ESQUEMA_VENTAS_CONSOLIDADA = pa.DataFrameSchema(
+    {
+        **ESQUEMA_VENTAS.columns,
+
+        # Todas las energias deben quedar expresadas en kWh.
+        "unidad": Column(str, Check.isin(["kWh"])),
+
+        # Año del archivo de origen.
+        "anio_origen": Column(
+            int,
+            Check.isin([2023, 2024, 2025, 2026])
+        ),
+
+        # Valores originales, conservados para auditoria.
+        "unidad_origen": Column(str, nullable=True),
+        "municipio_origen": Column(str, nullable=True),
+        "segmento_origen": Column(str, nullable=True),
+        "tipo_compra_origen": Column(str, nullable=True),
+    },
+    unique=["periodo", "divipola", "segmento", "tipo_compra"],
+    strict=True,
+)

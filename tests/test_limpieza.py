@@ -17,7 +17,7 @@ import pandera.errors   # los errores que lanza pandera cuando una regla falla
 import pytest           # pytest: la libreria que encuentra y ejecuta las pruebas
 
 from src.quality.esquemas import ESQUEMA_VENTAS               # el esquema de la capa plata
-from src.silver.enerandes import clave_municipio, limpiar, sin_tildes   # lo que se prueba
+from src.silver.enerandes import clave_municipio, limpiar, normalizar_periodo, sin_tildes   # lo que se prueba
 
 
 # ---------------------------------------------------------------------------
@@ -118,3 +118,18 @@ def test_total_en_minuscula_tambien_se_elimina():
     # quitado, habria 3 y la prueba fallaria
     assert len(limpias) == 2
 
+@pytest.mark.parametrize(
+    "entrada, esperado",
+    [
+        ("2023-04", "2023-04"),
+        ("jun-24", "2024-06"),
+        ("09/2024", "2024-09"),
+        ("2024-07", "2024-07"),
+        ("06/2025", "2025-06"),
+        ("01/03/2026", "2026-03"),
+        ("fecha_invalida", None),
+        ("31/02/2026", None),
+    ],
+)
+def test_normalizar_periodo(entrada, esperado):
+    assert normalizar_periodo(entrada) == esperado

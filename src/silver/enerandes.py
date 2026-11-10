@@ -824,7 +824,7 @@ def escribir_reporte_consolidado(ventas, cuarentena, metricas):
 
     config.DIR_DOCS.mkdir(parents=True, exist_ok=True)
 
-    ruta = config.DIR_DOCS / "reporte_calidad.md"
+    ruta = config.DIR_DOCS / "reporte_calidad_enerandes.md"
     ruta.write_text("\n".join(lineas), encoding="utf-8")
 
 

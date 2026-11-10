@@ -462,16 +462,19 @@ def transformar_diario(
 def guardar_diarios_xm():
     """Valida y guarda embalses y aportes hidricos."""
     from src import config
-    from pandera.pandas import DataFrameSchema, Column, Check
+    from src.quality.esquemas import (
+        ESQUEMA_XM_EMBALSES,
+        ESQUEMA_XM_APORTES,
+    )
 
     config.DIR_SILVER.mkdir(parents=True, exist_ok=True)
 
     fuentes = [
-        ("xm_embalses", "valor_embalse", Check.in_range(0, 1)),
-        ("xm_aportes_hidricos", "valor_aportes", Check.ge(0)),
+        ("xm_embalses", "valor_embalse", ESQUEMA_XM_EMBALSES),
+        ("xm_aportes_hidricos", "valor_aportes", ESQUEMA_XM_APORTES),
     ]
 
-    for archivo, indicador, regla in fuentes:
+    for archivo, indicador, esquema in fuentes:
         bronce = pd.read_parquet(
             config.DIR_BRONZE / f"{archivo}.parquet"
         )
@@ -479,18 +482,7 @@ def guardar_diarios_xm():
         df = transformar_diario(bronce, indicador)
         df = df[["fecha", "entidad", indicador]].copy()
 
-        esquema = DataFrameSchema(
-            {
-                "fecha": Column(
-                    str, Check.str_matches(r"^\d{4}-\d{2}-\d{2}$")
-                ),
-                "entidad": Column(str, Check.str_length(min_value=1)),
-                indicador: Column(float, regla),
-            },
-            unique=["fecha", "entidad"],
-            strict=True,
-        )
-
+        # Utilizar el esquema centralizado.
         esquema.validate(df, lazy=True)
 
         df.to_parquet(
@@ -499,6 +491,7 @@ def guardar_diarios_xm():
         )
 
         print(f"{archivo}: {len(df)} registros - Pandera OK")
+
 
 
 def guardar_catalogo_xm():

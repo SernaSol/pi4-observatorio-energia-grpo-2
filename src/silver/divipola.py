@@ -2,25 +2,9 @@
 """Limpieza de DIVIPOLA del DANE para la capa plata."""
 
 import pandas as pd
-import pandera.pandas as pa
-from pandera.pandas import Column, Check
+from src.quality.esquemas import ESQUEMA_DIVIPOLA
 
 from src import config
-
-
-ESQUEMA_DIVIPOLA = pa.DataFrameSchema(
-    {
-        "cod_dpto": Column(str, Check.str_matches(r"^\d{2}$")),
-        "dpto": Column(str, Check.str_length(min_value=1)),
-        "cod_mpio": Column(str, Check.str_matches(r"^\d{5}$")),
-        "nom_mpio": Column(str, Check.str_length(min_value=1)),
-        "tipo_municipio": Column(str, nullable=True),
-        "longitud": Column(float, Check.in_range(-180, 180)),
-        "latitud": Column(float, Check.in_range(-90, 90)),
-    },
-    unique=["cod_mpio"],
-    strict=True,
-)
 
 
 def main():

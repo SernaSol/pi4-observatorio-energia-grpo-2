@@ -9,49 +9,13 @@ Valida con Pandera y guarda datos limpios y cuarentena.
 import unicodedata
 
 import pandas as pd
-import pandera.pandas as pa
-from pandera.pandas import Column, Check
+from src.quality.esquemas import (
+    ESQUEMA_IDEAM_PRECIPITACION as ESQUEMA_PRECIPITACION,
+    ESQUEMA_IDEAM_TEMPERATURA as ESQUEMA_TEMPERATURA,
+)
 
 from src import config
 
-
-# ---------------------------------------------------------------------------
-# ESQUEMAS PANDERA
-# ---------------------------------------------------------------------------
-
-COLUMNAS_COMUNES = {
-    "codigoestacion": Column(str, Check.str_length(min_value=1)),
-    "nombreestacion": Column(str, Check.str_length(min_value=1)),
-    "municipio": Column(str, Check.str_length(min_value=1)),
-    "cod_mpio": Column(str, Check.str_matches(r"^\d{5}$")),
-    "fecha": Column(pa.DateTime),
-}
-
-ESQUEMA_PRECIPITACION = pa.DataFrameSchema(
-    {
-        **COLUMNAS_COMUNES,
-        "precipitacion_mm": Column(float, Check.ge(0)),
-    },
-    unique=["codigoestacion", "fecha"],
-    strict=False,
-)
-
-ESQUEMA_TEMPERATURA = pa.DataFrameSchema(
-    {
-        **COLUMNAS_COMUNES,
-        "temp_media_c": Column(float),
-        "temp_min_c": Column(float),
-        "temp_max_c": Column(float),
-    },
-    checks=Check(
-        lambda df: (
-            (df["temp_min_c"] <= df["temp_media_c"])
-            & (df["temp_media_c"] <= df["temp_max_c"])
-        )
-    ),
-    unique=["codigoestacion", "fecha"],
-    strict=False,
-)
 
 
 # ---------------------------------------------------------------------------

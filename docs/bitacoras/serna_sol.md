@@ -127,8 +127,41 @@ Comprendí la importancia de organizar los extractores, validar las respuestas d
 
 También reforcé el manejo de Git y GitHub como herramientas para el trabajo colaborativo.
 
+
+
 ## 6. Conclusión personal
 
 Mi participación contribuyó a mejorar la cobertura histórica de las fuentes energéticas y climáticas, conservar la información de las fuentes originales y fortalecer las validaciones del proyecto mediante pruebas automáticas.
 
 Estas actividades permiten que el equipo disponga de una base técnica organizada para continuar con las siguientes etapas de integración y análisis de datos.
+
+------------------------------------
+# EA2
+
+### Objetivo de mi participación
+
+Durante la segunda entrega participé en la transformación de las fuentes de datos hacia la capa plata, la implementación de controles de calidad y las pruebas automáticas, procurando conservar los datos originales y garantizar la trazabilidad de los registros.
+
+### Actividades desarrolladas
+
+- Limpieza y consolidación de las ventas de EnerAndes correspondientes a 2023-2026.
+- Transformación y estandarización de datos de XM, IDEAM, NOAA y DIVIPOLA.
+- Implementación de esquemas de validación con Pandera.
+- Desarrollo de pruebas automáticas para verificar reglas de limpieza y calidad.
+- Consolidación del reporte de calidad de la capa plata.
+
+### Resultados obtenidos
+
+Se obtuvieron 4.007 registros limpios de EnerAndes y 163 registros en cuarentena. Para XM, se procesaron 5.935.449 registros válidos de generación y se separaron 2.473.215 registros en cuarentena.
+
+La batería de pruebas de Python de EA2 alcanzó 26 pruebas aprobadas.
+
+### Evidencias de colaboración
+
+- Pull Request #8: integración de las primeras transformaciones de la capa plata.
+- Pull Request #9: integración de las validaciones, pruebas y documentación de calidad.
+- Archivos de evidencia: `docs/reporte_calidad.md`, `src/silver/`, `src/quality/esquemas.py` y `tests/`.
+
+### Aprendizajes
+
+La segunda entrega permitió profundizar en procesos ETL, validación de datos con Pandera, gestión de registros en cuarentena y construcción de información confiable para su posterior modelado analítico.

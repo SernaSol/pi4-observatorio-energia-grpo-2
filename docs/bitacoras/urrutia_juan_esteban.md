@@ -107,3 +107,37 @@ También permitieron comprender la importancia de conservar los datos originales
 Mi participación contribuyó a ampliar las fuentes de información disponibles en el observatorio y a facilitar la evaluación inicial de los datos.
 
 La generación de muestras y el perfilamiento ayudan a que el equipo pueda consultar, comprender y validar la información antes de avanzar hacia las siguientes etapas del proyecto.
+----------------------------------
+# EA2
+
+### Objetivo de mi participación
+
+Durante la segunda entrega participé en el desarrollo del modelo dimensional de la capa oro, la elaboración de consultas SQL para responder preguntas de negocio, la documentación técnica y la automatización de la ejecución reproducible de la capa plata.
+
+### Actividades desarrolladas
+
+- Construcción del modelo dimensional mediante dbt y DuckDB.
+- Creación de cinco dimensiones y tres tablas de hechos.
+- Implementación de pruebas de integridad referencial, unicidad, valores obligatorios y granularidad.
+- Elaboración del diagrama entidad-relación y el diccionario de datos.
+- Desarrollo y ejecución de tres consultas SQL sobre la capa oro.
+- Implementación de `src/transformar.py` para ejecutar las transformaciones de plata desde un único comando.
+- Actualización del README y documentación de los resultados de negocio.
+
+### Resultados obtenidos
+
+La ejecución de `python -m src.transformar` finalizó correctamente, procesando las cinco fuentes y ejecutando las validaciones Pandera.
+
+La construcción de la capa oro mediante `dbt build` generó ocho tablas y una vista, con 33 pruebas de datos aprobadas y un resultado final de `PASS=42 WARN=0 ERROR=0`.
+
+Se documentaron tres consultas sobre precio y demanda por fase ENSO, generación por fuente energética y ventas por municipio y segmento.
+
+### Evidencias de colaboración
+
+- Pull Request #10: modelo dimensional y pruebas dbt.
+- Pull Request #11: documentación, consultas SQL y reproducibilidad.
+- Archivos de evidencia: `dbt/models/marts/`, `consultas/oro/`, `docs/modelo_dimensional.md`, `docs/diccionario_datos.md` y `src/transformar.py`.
+
+### Aprendizajes
+
+Esta entrega permitió fortalecer conocimientos de modelado dimensional, bases de datos analíticas, validación de integridad con dbt, consultas SQL y automatización de pipelines reproducibles.

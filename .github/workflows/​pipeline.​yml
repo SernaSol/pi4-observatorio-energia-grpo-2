@@ -83,3 +83,4 @@ jobs:
           path: data/gold/
           # Cuantos dias guarda GitHub el artefacto antes de borrarlo
           retention-days: 7
+

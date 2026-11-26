@@ -1,0 +1,84 @@
+
+name: pipeline-observatorio
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Volver a descargar todas las fuentes (ignora la cache de bronce)"
+        type: boolean
+        default: false
+
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Instalar librerias
+        run: pip install -r requirements.txt
+
+      - name: Restaurar la capa bronce (cache)
+        if: ${{ !inputs.forzar }}
+        uses: actions/cache/restore@v4
+        with:
+          path: data/bronze
+          key: bronce-${{ hashFiles('src/config.py', 'src/extract/*.py') }}-${{ github.run_id }}
+          restore-keys: |
+            bronce-${{ hashFiles('src/config.py', 'src/extract/*.py') }}-
+
+      - name: Capa bronce (extraccion de las 5 fuentes)
+        timeout-minutes: 90
+        run: python -m src.pipeline
+
+      - name: Guardar la capa bronce (cache)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data/bronze
+          key: bronce-${{ hashFiles('src/config.py', 'src/extract/*.py') }}-${{ github.run_id }}
+
+      - name: Capa plata (limpieza y pandera de todas las fuentes)
+        run: python -m src.transformar --solo-plata
+
+      - name: Capa oro (dbt build)
+        run: dbt build --project-dir dbt --profiles-dir dbt
+
+      - name: Pruebas (pytest)
+        run: python -m pytest -v
+
+      - name: Exportar la capa oro
+        run: python -m src.exportar_oro
+
+      - name: Publicar la capa oro
+        uses: actions/upload-artifact@v4
+        with:
+          name: capa-oro
+          path: data/gold/
+          retention-days: 7
+
+      - name: Publicar el reporte de calidad
+        uses: actions/upload-artifact@v4
+        with:
+          name: reporte-calidad
+          path: docs/reporte_calidad.md
+          retention-days: 7

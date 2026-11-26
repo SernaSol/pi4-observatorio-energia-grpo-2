@@ -1,6 +1,8 @@
 # Observatorio de Energía y Clima — Equipo 2
 > **Proyecto Integrado IV · Integración de Información**  
 
+![pipeline](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/actions/workflows/pipeline.yml/badge.svg)
+
 > IU Digital de Antioquia | Periodo académico 2026-2
 
 **Proyecto de integración, calidad y análisis de datos energéticos y climáticos de Colombia.**

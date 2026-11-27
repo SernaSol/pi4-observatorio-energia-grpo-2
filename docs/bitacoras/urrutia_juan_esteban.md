@@ -141,3 +141,142 @@ Se documentaron tres consultas sobre precio y demanda por fase ENSO, generación
 ### Aprendizajes
 
 Esta entrega permitió fortalecer conocimientos de modelado dimensional, bases de datos analíticas, validación de integridad con dbt, consultas SQL y automatización de pipelines reproducibles.
+
+
+---
+
+# EA3 — Modelado analítico, dashboard y hallazgos
+
+**Integrante:** Juan Esteban Urrutia  
+**Rol principal:** BI Analyst / Storyteller  
+**Rol complementario:** Analytics Engineer  
+**Periodo académico:** 2026-2
+
+## 1. Objetivo de mi participación
+
+Durante la Evidencia 3 participé en la ampliación del modelo analítico del Observatorio de Energía y Clima y en el desarrollo de un dashboard interactivo que permite visualizar información del mercado eléctrico colombiano, los recursos hídricos, las condiciones climáticas y el comportamiento comercial de EnerAndes.
+
+Mi participación se orientó a transformar los datos de la capa oro en indicadores y visualizaciones que respondieran las seis preguntas de negocio del proyecto.
+
+## 2. Actividades desarrolladas
+
+### 2.1. Ampliación de las métricas históricas de XM
+
+Amplié la configuración y los procesos de extracción de XM para incorporar nuevas métricas y períodos históricos necesarios para el análisis de la Evidencia 3.
+
+Las actividades desarrolladas incluyeron:
+
+- Ampliación de la información histórica de embalses desde enero de 2015.
+- Incorporación de aportes hídricos desde enero de 2023.
+- Integración de precios de bolsa diarios.
+- Incorporación de información de precios de contratos.
+- Incorporación de la media histórica de aportes hídricos.
+- Adecuación de las consultas por ventanas de fechas.
+
+Estas ampliaciones permiten estudiar las variaciones de los indicadores energéticos e hídricos durante períodos más extensos.
+
+**Evidencia:** [Commit `f014c21` — Ampliación de métricas XM](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/commit/f014c21edc1bc24e315f9fcae879b6be238ae728).
+
+### 2.2. Desarrollo de nuevos modelos staging y analíticos
+
+Desarrollé modelos de preparación y transformación de datos mediante dbt y DuckDB, ampliando la capa oro construida durante la Evidencia 2.
+
+Se incorporaron los siguientes modelos staging:
+
+- `stg_xm_precio_bolsa_diario`
+- `stg_xm_precio_contrato`
+- `stg_xm_aportes_media`
+
+Asimismo, se desarrollaron cuatro modelos analíticos:
+
+| Modelo | Objetivo |
+|---|---|
+| `fact_mercado_mensual` | Analizar mensualmente precios y demanda eléctrica. |
+| `fact_generacion_mensual` | Consolidar la generación eléctrica por recurso y período. |
+| `fact_indicadores_hidricos` | Analizar embalses y aportes frente a sus referencias históricas. |
+| `fact_clima_mensual` | Analizar indicadores climáticos por municipio y mes. |
+
+También se amplió la dimensión calendario para incorporar el período histórico desde 2015.
+
+La ejecución de `dbt build` permitió validar los modelos mediante las pruebas de datos configuradas para el observatorio.
+
+**Evidencias:**
+
+- [Commit `53d6880` — Nuevos modelos staging](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/commit/53d6880e6e1b977da1c039afa71f11fefaddf7ef).
+- [Commit `dd32b49` — Ampliación de la capa oro](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/commit/dd32b49f33d3fb4120543de2b2d32ee9d3bc245e).
+
+### 2.3. Desarrollo del dashboard interactivo en Streamlit
+
+Implementé el dashboard del Observatorio de Energía y Clima mediante Streamlit y Pandas, utilizando como fuente los archivos Parquet exportados desde la capa oro.
+
+El dashboard se encuentra en `dashboard/app.py` y utiliza `dashboard/datos.py` para cargar las tablas analíticas.
+
+Se desarrollaron seis análisis de negocio:
+
+1. Evolución histórica del nivel de embalses durante las fases ENSO.
+2. Comportamiento de los aportes hídricos frente a su media histórica.
+3. Evolución de precios de bolsa y demanda eléctrica.
+4. Participación y evolución de la generación por fuente energética.
+5. Temperatura y precipitación por municipio.
+6. Ventas de energía e ingresos de EnerAndes por segmento, municipio y tipo de compra.
+
+Se incorporaron filtros por período de análisis, fase ENSO, municipios y segmento de clientes, según las dimensiones correspondientes a cada visualización.
+
+La aplicación permite explorar tendencias y comparar indicadores mediante gráficas de líneas, barras y áreas, así como indicadores numéricos.
+
+**Evidencia:** [Commit `54e1e33` — Implementación del dashboard Streamlit](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/commit/54e1e33e80fc74248415fbc8fb51bd3c8220c0d1).
+
+### 2.4. Integración mediante Pull Request
+
+Los cambios de extracción, modelado y visualización se desarrollaron en la rama `feature/dashboard` y se integraron a `main` mediante el Pull Request #18.
+
+El Pull Request incluyó cuatro commits y fue revisado y aprobado por Sol Elena Serna Vargas antes de su integración.
+
+**Evidencia:** [Pull Request #18 — Feature/dashboard](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/18).
+
+## 3. Resultados obtenidos
+
+| Indicador | Resultado |
+|---|---:|
+| Modelos materializados de la capa oro | 12 |
+| Pruebas de datos dbt aprobadas | 33 |
+| Operaciones exitosas de `dbt build` | 49 |
+| Tablas exportadas de oro | 12 |
+| Análisis de negocio implementados | 6 |
+| Pull Request de desarrollo | #18 |
+
+El dashboard fue ejecutado localmente y permitió visualizar los indicadores construidos a partir de las tablas de la capa oro.
+
+## 4. Dificultades y soluciones
+
+Uno de los principales desafíos consistió en ampliar la cobertura histórica de XM, debido al volumen de información y a las respuestas variables de la API. Para abordar esta situación, se utilizaron consultas por períodos y archivos de datos que facilitan la recuperación de información.
+
+Otro reto fue integrar información de diferentes fuentes y granularidades en un mismo dashboard. Para resolverlo, se incorporaron modelos analíticos mensuales y diarios, dimensiones de consulta y filtros interactivos.
+
+Durante el análisis se consideraron las diferencias de cobertura temporal y las limitaciones de las unidades reportadas por las fuentes originales, evitando interpretar asociaciones descriptivas como relaciones causales.
+
+## 5. Evidencias
+
+| Actividad | Evidencia |
+|---|---|
+| Ampliación de métricas XM | `src/config.py` y `src/extract/xm.py` |
+| Modelos staging | `dbt/models/staging/` |
+| Modelos analíticos | `dbt/models/marts/` |
+| Aplicación Streamlit | `dashboard/app.py` |
+| Carga de datos Parquet | `dashboard/datos.py` |
+| Capturas del dashboard | `docs/evidencias/ea3_dashboard_*.png` |
+| Integración de cambios | [Pull Request #18](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/18) |
+
+## 6. Aprendizajes
+
+Durante la Evidencia 3 fortalecí mis conocimientos sobre modelado analítico, transformación de datos mediante dbt y construcción de aplicaciones de visualización con Streamlit.
+
+Comprendí la importancia de diseñar indicadores que respondan preguntas concretas de negocio, integrar correctamente las dimensiones de análisis y presentar información de forma clara para apoyar la toma de decisiones.
+
+También reforcé las prácticas de trabajo colaborativo mediante Git, GitHub y revisión de Pull Requests.
+
+## 7. Conclusión personal
+
+Mi participación contribuyó a ampliar las capacidades analíticas del Observatorio de Energía y Clima y a transformar los datos procesados en visualizaciones que facilitan la interpretación de tendencias energéticas, hídricas, climáticas y comerciales.
+
+La integración de los nuevos modelos de la capa oro con el dashboard Streamlit proporciona una herramienta de consulta que sirve como base para la elaboración del informe de hallazgos y recomendaciones dirigido a la gerencia de EnerAndes.

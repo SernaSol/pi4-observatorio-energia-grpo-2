@@ -165,3 +165,120 @@ La batería de pruebas de Python de EA2 alcanzó 26 pruebas aprobadas.
 ### Aprendizajes
 
 La segunda entrega permitió profundizar en procesos ETL, validación de datos con Pandera, gestión de registros en cuarentena y construcción de información confiable para su posterior modelado analítico.
+
+---
+
+# EA3 — Automatización y calidad de datos
+
+**Integrante:** Sol Elena Serna Vargas  
+**Rol principal:** Data Quality Analyst  
+**Rol complementario:** Data Engineer  
+**Periodo académico:** 2026-2
+
+## 1. Objetivo de mi participación
+
+Durante la Evidencia 3 participé en la automatización del pipeline del Observatorio de Energía y Clima y en el fortalecimiento de los controles de calidad de los datos.
+
+Mi trabajo se enfocó en integrar las etapas de extracción, transformación, modelado y pruebas automáticas mediante GitHub Actions, garantizando que los resultados puedan verificarse de forma reproducible.
+
+## 2. Actividades desarrolladas
+
+### 2.1. Automatización del pipeline con GitHub Actions
+
+Implementé y ajusté el workflow `.github/workflows/pipeline.yml`, incorporando las siguientes funcionalidades:
+
+- Ejecución automática diaria mediante `schedule`.
+- Ejecución manual mediante `workflow_dispatch`.
+- Ejecución de pruebas cuando se crean o actualizan Pull Requests hacia `main`.
+- Extracción de datos de las cinco fuentes del observatorio.
+- Transformación y validación de la capa plata mediante Pandera.
+- Construcción y validación de la capa oro utilizando dbt y DuckDB.
+- Ejecución de pruebas automatizadas con pytest.
+- Exportación de las tablas de la capa oro en formato Parquet.
+- Publicación de artefactos y del reporte de calidad en GitHub Actions.
+
+También se incorporaron mecanismos de caché para reutilizar los archivos de extracción y reducir consultas repetidas a las fuentes externas.
+
+### 2.2. Implementación de pruebas adicionales de calidad
+
+Desarrollé tres pruebas automatizadas para verificar la consistencia de los datos analíticos de la capa oro.
+
+Las pruebas se encuentran en `tests/test_calidad_ea3.py`:
+
+| Prueba | Validación |
+|---|---|
+| `test_calendario_sin_fechas_duplicadas` | Comprueba que la dimensión calendario no contenga fechas duplicadas. |
+| `test_porcentaje_aportes_hidricos_correcto` | Verifica la consistencia del cálculo del porcentaje de aportes hídricos frente a la media histórica. |
+| `test_clima_sin_duplicados_por_mes_municipio` | Valida que los indicadores climáticos no contengan duplicados para una misma combinación de mes y municipio. |
+
+Estas pruebas se integraron con las existentes de las Evidencias 1 y 2.
+
+### 2.3. Ejecución y validación de pruebas
+
+Ejecuté la batería de pruebas automatizadas utilizando el comando:
+
+```powershell
+python -m pytest -v
+```
+
+**Resultados de la ejecución local:**
+
+| Indicador | Resultado |
+|---|---:|
+| Pruebas aprobadas | 30 |
+| Pruebas nuevas EA3 | 3 |
+| Pruebas fallidas | 0 |
+| Tiempo de ejecución | 17,88 segundos |
+
+También se verificó la construcción de la capa oro mediante `dbt build`, con 33 pruebas de datos aprobadas y sin errores.
+
+### 2.4. Control de versiones y trabajo colaborativo
+
+Desarrollé las actividades mediante ramas independientes de Git, utilizando Pull Requests para solicitar la revisión de los cambios antes de integrarlos a `main`.
+
+Durante la Evidencia 3 se realizaron los siguientes Pull Requests:
+
+| PR | Actividad |
+|---|---|
+| [#14](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/14) | Implementación del pipeline automatizado y exportación de la capa oro. |
+| [#15](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/15) | Actualización del workflow con las tres capas, pytest y artefactos. |
+| [#16](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/16) | Ajustes adicionales de automatización. |
+| [#17](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/17) | Incorporación de la insignia del workflow en el README. |
+| [#19](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/19) | Incorporación de tres pruebas adicionales de calidad de EA3. |
+
+Los cambios fueron revisados y aprobados por Juan Esteban Urrutia antes de su integración a la rama principal.
+
+## 3. Dificultades y soluciones
+
+Uno de los principales desafíos fue la ejecución de las extracciones históricas de XM dentro de GitHub Actions, debido a tiempos de respuesta elevados y errores intermitentes de la API.
+
+Se utilizaron consultas por ventanas de fechas, mecanismos de caché y reintentos de las ejecuciones para facilitar el procesamiento y reducir las descargas innecesarias.
+
+También fue necesario garantizar que las pruebas de calidad utilizaran correctamente las tablas generadas por dbt, respetando el orden de ejecución de las etapas del pipeline.
+
+## 4. Evidencias
+
+| Actividad | Evidencia |
+|---|---|
+| Automatización | `.github/workflows/pipeline.yml` |
+| Pruebas de calidad EA3 | `tests/test_calidad_ea3.py` |
+| Ejecución de pytest | `docs/evidencias/ea3_pytest.png` |
+| Exportación de oro | `src/exportar_oro.py` |
+| Ejecución del pipeline | [GitHub Actions](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/actions/workflows/pipeline.yml) |
+| Integración de pruebas | [Pull Request #19](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/pull/19) |
+
+## 5. Aprendizajes
+
+Durante esta evidencia fortalecí mis conocimientos sobre integración continua y automatización de pipelines de datos con GitHub Actions.
+
+Comprendí la importancia de integrar controles de calidad en cada etapa del procesamiento, ejecutar pruebas automáticas y publicar artefactos que permitan verificar los resultados.
+
+También reforcé el uso de Git y GitHub para el desarrollo colaborativo, la revisión de código y la integración controlada de cambios.
+
+## 6. Conclusión personal
+
+Mi participación en la Evidencia 3 contribuyó a automatizar el procesamiento integral de los datos y fortalecer la confiabilidad del Observatorio de Energía y Clima.
+
+La integración de GitHub Actions, Pandera, dbt y pytest permite detectar errores durante el procesamiento, validar los indicadores y disponer de información estructurada para el dashboard y los análisis de negocio.
+
+Este trabajo proporciona mecanismos de automatización y calidad que respaldan los hallazgos y recomendaciones presentados a la gerencia de EnerAndes.

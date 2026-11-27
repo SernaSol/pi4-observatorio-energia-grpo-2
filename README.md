@@ -15,19 +15,52 @@
 | 📈 **Análisis**     | Tres consultas SQL y respuestas de negocio               | Resultados y capturas documentados                  |
 
 ## 👥 Integrantes y responsabilidades
-| Integrante             | GitHub                                                 | Responsabilidades                             |
-| :--------------------- | :----------------------------------------------------- | :-------------------------------------------- |
-| Sol Elena Serna Vargas | [@SernaSol](https://github.com/SernaSol)               | Ingeniería de datos, arquitectura y analítica |
-| Esteban Urrutia        | [@estebanurrutia1](https://github.com/estebanurrutia1) | Calidad de datos, modelado BI y presentación  |
+
+| Integrante | GitHub | Semanas 1–4 (EA1 y EA2) | Rol principal EA3 | Rol complementario EA3 |
+|---|---|---|---|---|
+| Sol Elena Serna Vargas | [@SernaSol](https://github.com/SernaSol) | Ingeniería de datos, arquitectura y analítica | Data Quality Analyst | Data Engineer |
+| Juan Esteban Urrutia | [@estebanurrutia1](https://github.com/estebanurrutia1) | Calidad de datos, modelado BI y presentación | BI Analyst / Storyteller | Analytics Engineer |
+
+### Responsabilidades en la Evidencia 3
+
+**Sol Elena Serna Vargas — Data Quality Analyst / Data Engineer**
+
+- Automatización del pipeline con GitHub Actions, incluyendo ejecuciones programadas y manuales.
+- Integración de las etapas de extracción, transformación y modelado de datos.
+- Desarrollo y ejecución de pruebas automatizadas con pytest.
+- Validación de integridad, consistencia, granularidad y calidad de los datos.
+- Verificación de las ejecuciones del pipeline y sus artefactos.
+- Documentación de resultados y controles de calidad.
+
+**Juan Esteban Urrutia — BI Analyst / Storyteller / Analytics Engineer**
+
+- Ampliación de métricas históricas de XM.
+- Desarrollo de modelos staging y marts con dbt.
+- Construcción y exportación de doce tablas de la capa oro.
+- Desarrollo del dashboard interactivo con Streamlit.
+- Implementación de seis preguntas de negocio y filtros interactivos.
+- Análisis de los indicadores energéticos, hídricos, climáticos y comerciales.
+- Elaboración del informe de hallazgos y recomendaciones para la gerencia de EnerAndes.
+
+### Trabajo colaborativo
+
+Debido a que el equipo está conformado por dos integrantes, las responsabilidades de los cuatro roles se distribuyeron entre ambos estudiantes, asignando un rol principal y uno complementario a cada integrante.
+
+El desarrollo se realizó mediante ramas de trabajo, commits individuales y Pull Requests revisados por otro integrante antes de su integración en `main`.
+
+
+-----------------------------------------------
 
 ## 🎯 Objetivo del proyecto y pregunta de negocio
 Construir un **Observatorio de Energía y Clima** que integre información del mercado eléctrico colombiano (**XM**), condiciones climáticas (**IDEAM y NOAA**), ventas de **EnerAndes** y datos territoriales oficiales del **DANE / DIVIPOLA**, para disponer de información confiable y facilitar el análisis del sector energético.
 
-El proyecto se desarrolla de forma progresiva en dos entregas:
+El proyecto se desarrolla de forma progresiva en tres entregas:
 
 - **📦 EA1 — Extracción y capa bronce:** obtener datos reales de las cinco fuentes, preservar su estructura original y trazabilidad, generar muestras y documentar la calidad inicial mediante perfilamiento.
 
-- **🧹 EA2 — Calidad, capa plata y capa oro:** limpiar y homologar los datos, validar sus reglas con Pandera, conservar registros en cuarentena y construir con dbt y DuckDB un modelo dimensional de **3 tablas de hechos y 5 dimensiones**, sobre el que se ejecutan consultas SQL de negocio.
+- **🧹 EA2 — Calidad, capa plata y capa oro:** limpiar y homologar los datos, validar sus reglas con Pandera, conservar registros en cuarentena y construir con dbt y DuckDB un modelo dimensional de tres tablas de hechos y cinco dimensiones, sobre el que se ejecutan consultas SQL de negocio.
+
+- **📈 EA3 — Automatización, visualización y análisis de hallazgos:** automatizar la ejecución integral de las capas bronce, plata y oro mediante GitHub Actions, incorporar nuevas pruebas de calidad, ampliar el modelo analítico y desarrollar un dashboard interactivo en Streamlit que responda las seis preguntas de negocio. Los resultados se consolidan en un informe de hallazgos con conclusiones y recomendaciones para la gerencia de EnerAndes.
 
 **Pregunta general de negocio:**
 
@@ -36,24 +69,40 @@ El proyecto se desarrolla de forma progresiva en dos entregas:
 **Análisis desarrollados en EA2:** comparar precio y demanda por fase ENSO, identificar las fuentes de mayor generación eléctrica y analizar las ventas de EnerAndes por municipio y segmento. Estos análisis son **descriptivos**: apoyan la toma de decisiones, pero no establecen causalidad ni resuelven por sí solos toda la pregunta general.
 
 ## 🏗️ Arquitectura general del proyecto
-El Observatorio de Energía y Clima implementa una arquitectura de datos de tres capas: **bronce, plata y oro**, desarrolladas durante las entregas EA1 y EA2.
+El Observatorio de Energía y Clima implementa una arquitectura de datos de tres capas: **bronce, plata y oro**. Durante las Evidencias 1 y 2 se desarrollaron los procesos de extracción, limpieza, validación y modelado dimensional.
+
+En la Evidencia 3, estos procesos se integraron en un workflow de **GitHub Actions** con ejecución diaria programada y ejecución manual. El flujo comprende la extracción de cinco fuentes, la transformación y validación con Pandera, la construcción de modelos analíticos con dbt y DuckDB, la ejecución de pruebas automáticas con pytest y la exportación de doce tablas de la capa oro en formato Parquet.
+
+Los datos de la capa oro alimentan un dashboard interactivo desarrollado en **Streamlit**, que incorpora seis análisis de negocio con filtros por fecha y otras dimensiones. Los resultados permiten presentar hallazgos y recomendaciones para la gerencia de EnerAndes.
 
 ### 🔄 Flujo del pipeline
+
 ```mermaid
+
 flowchart TD
     XM["XM · Mercado eléctrico"] --> B
     IDEAM["IDEAM · Datos climáticos"] --> B
     NOAA["NOAA · Índice ONI"] --> B
     ENER["EnerAndes · Ventas"] --> B
     DANE["DANE · DIVIPOLA"] --> B
-    B["📦 BRONCE · EA1<br/>Extracción y trazabilidad<br/>14 archivos Parquet"]
-    P["🧹 PLATA · EA2<br/>Limpieza y homologación<br/>Pandera y cuarentenas"]
-    O["🏆 ORO · EA2<br/>dbt + DuckDB<br/>3 hechos y 5 dimensiones"]
-    Q["📊 ANÁLISIS DE NEGOCIO<br/>3 consultas SQL<br/>Resultados y conclusiones"]
-    B -->|"python -m src.transformar"| P
-    P -->|"dbt build"| O
-    O --> Q
+
+    GA["GitHub Actions<br/>Ejecución diaria y manual"] --> B
+
+    B["📦BRONCE<br/>Extracción y trazabilidad"] --> P
+    P["🧹PLATA<br/>Limpieza, Pandera y cuarentenas"] --> O
+    O["🏆ORO<br/>dbt build + DuckDB<br/>Modelos analíticos"]
+
+    O --> T["Pruebas automáticas<br/>pytest"]
+    T --> E["Exportación de capa oro<br/>12 archivos Parquet"]
+    E --> A["Artefactos de GitHub Actions"]
+
+    E --> D["📊Dashboard Streamlit<br/>6 preguntas de negocio"]
+    D --> I["Informe de hallazgos<br/>Gerencia de EnerAndes"]
+
 ```
+
+
+
 ### 📋 Descripción de las capas
 | Capa | Entrega | Función principal |
 |---|---|---|
@@ -542,6 +591,402 @@ con.close()
 '@ | python -
 ```
 **Alcance de la verificación:** la ejecución se realizó con los archivos bronce existentes localmente. Para comprobar una reproducción íntegra desde un clon limpio también debe disponerse del Excel de EnerAndes y acceso a las fuentes externas.
+
+
+---
+
+## 📙 ENTREGA 3 — Automatización, dashboard y hallazgos (EA3)
+
+### ⚙️ 1. Automatización del pipeline con GitHub Actions
+
+En la Evidencia 3 se implementó la automatización del Observatorio de Energía y Clima mediante GitHub Actions, utilizando el archivo `.github/workflows/pipeline.yml`.
+
+El workflow `pipeline-observatorio` permite ejecutar el procesamiento integral de los datos sin intervención manual, desde la extracción de las fuentes originales hasta la generación y publicación de los archivos de la capa oro.
+
+**Modalidades de ejecución:**
+
+| Disparador | Descripción |
+|---|---|
+| `schedule` | Ejecución automática diaria a las 11:00 UTC (6:00 a. m. de Colombia). |
+| `workflow_dispatch` | Ejecución manual desde la pestaña Actions, con la opción de forzar la extracción de las fuentes. |
+| `pull_request` | Ejecución automática cuando se abre o actualiza un Pull Request dirigido a `main`. |
+
+**Etapas del workflow:**
+
+| Etapa | Proceso | Herramienta |
+|---|---|---|
+| 1 | Instalación del entorno Python 3.11 y dependencias | Python / pip |
+| 2 | Extracción de las cinco fuentes y generación de datos bronce | Python |
+| 3 | Restauración y almacenamiento de caché de bronce | GitHub Actions Cache |
+| 4 | Limpieza, homologación y validaciones de la capa plata | Python / Pandera |
+| 5 | Construcción y validación de los modelos de la capa oro | dbt / DuckDB |
+| 6 | Ejecución de pruebas automatizadas | pytest |
+| 7 | Exportación de doce tablas de la capa oro en formato Parquet | Python / PyArrow |
+| 8 | Publicación de los archivos de oro y del reporte de calidad | GitHub Actions Artifacts |
+
+El workflow utiliza mecanismos de caché para reutilizar archivos de extracción y reducir consultas innecesarias a las fuentes externas. Los artefactos publicados permiten consultar los resultados generados durante cada ejecución exitosa.
+
+**Workflow del proyecto:** [Consultar GitHub Actions](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/actions/workflows/pipeline.yml).
+
+**Estado del pipeline:**
+
+![Estado de GitHub Actions](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/actions/workflows/pipeline.yml/badge.svg)
+
+
+#### 📸 Evidencia de cinco ejecuciones exitosas
+
+Durante la Evidencia 3 se registraron cinco ejecuciones exitosas del workflow `pipeline-observatorio`, correspondientes a los runs #2, #3, #4, #5 y #6.
+
+Las ejecuciones incluyen la validación automática de Pull Requests y una ejecución programada mediante `schedule`, demostrando el funcionamiento de la integración continua y la automatización diaria del observatorio.
+
+![EA3 - Cinco ejecuciones exitosas de GitHub Actions](docs/evidencias/ea3_actions_5_ejecuciones.png)
+
+
+### 📊 2. Ampliación de fuentes XM y modelos analíticos de la capa oro
+
+Durante la Evidencia 3 se amplió la cobertura histórica de los datos del mercado eléctrico colombiano y se incorporaron nuevos indicadores para responder las preguntas de negocio mediante el dashboard.
+
+#### Ampliación de las métricas XM
+
+Se actualizaron los procesos de extracción de XM para incorporar información histórica adicional y facilitar el análisis de precios, generación y condiciones hídricas del sistema eléctrico.
+
+| Indicador | Ampliación realizada |
+|---|---|
+| Embalses | Cobertura histórica desde el 1 de enero de 2015 hasta el 30 de septiembre de 2026. |
+| Aportes hídricos | Cobertura desde el 1 de enero de 2023 hasta el 30 de septiembre de 2026. |
+| Precio de bolsa diario | Incorporación de datos diarios para el análisis de precios. |
+| Precio de contratos | Incorporación de información para comparar precios del mercado. |
+| Media histórica de aportes | Incorporación de valores de referencia para analizar el comportamiento hídrico. |
+| Generación por recurso | Integración de información de generación por fuente energética. |
+
+La extracción se realiza mediante consultas por ventanas de fechas, conservando los archivos originales en la capa bronce y su trazabilidad.
+
+#### Ampliación del modelo analítico
+
+Se desarrollaron nuevos modelos de staging y tablas analíticas mediante dbt y DuckDB, complementando el modelo dimensional construido durante la Evidencia 2.
+
+**Nuevos modelos de staging:**
+
+- `stg_xm_precio_bolsa_diario`
+- `stg_xm_precio_contrato`
+- `stg_xm_aportes_media`
+
+**Nuevas tablas analíticas:**
+
+| Modelo | Finalidad |
+|---|---|
+| `fact_mercado_mensual` | Analizar precios y demanda eléctrica a nivel mensual. |
+| `fact_generacion_mensual` | Consolidar información de generación según el período y las fuentes energéticas. |
+| `fact_indicadores_hidricos` | Relacionar los niveles de embalses y los aportes hídricos con sus referencias históricas. |
+| `fact_clima_mensual` | Analizar las condiciones climáticas por municipio y período. |
+
+También se amplió el calendario de `dim_fecha` para incorporar información desde 2015 y facilitar los análisis históricos.
+
+#### Resultados de la capa oro
+
+La ejecución de `dbt build` construyó satisfactoriamente los modelos y ejecutó las validaciones de datos.
+
+| Indicador | Resultado |
+|---|---:|
+| Modelos de datos materializados | 12 |
+| Pruebas de datos dbt | 33 |
+| Total de operaciones de `dbt build` | 49 |
+| Errores | 0 |
+| Advertencias | 0 |
+| Tablas exportadas en Parquet | 12 |
+
+**Resultado de la ejecución:**
+
+```text
+PASS=49 WARN=0 ERROR=0
+```
+
+Para reconstruir la capa oro desde la raíz del repositorio:
+
+```powershell
+dbt build --project-dir dbt --profiles-dir dbt
+```
+
+Para exportar las tablas en formato Parquet:
+
+```powershell
+python -m src.exportar_oro
+```
+
+Los archivos generados se almacenan en `data/gold/` y se publican como artefactos mediante GitHub Actions, permitiendo su utilización en los análisis del dashboard.
+
+
+### 🧪 3. Pruebas automáticas y calidad de datos
+
+Durante la Evidencia 3 se fortalecieron los controles de calidad del Observatorio de Energía y Clima mediante pruebas automatizadas con **pytest**, validaciones con **Pandera** y pruebas de integridad del modelo analítico con **dbt**.
+
+Estas verificaciones permiten comprobar la consistencia de los datos procesados, la correcta construcción de indicadores y el cumplimiento de las reglas de calidad definidas para las diferentes capas del observatorio.
+
+#### Pruebas adicionales de la Evidencia 3
+
+Se incorporó el archivo `tests/test_calidad_ea3.py`, desarrollado para validar información de la capa oro mediante consultas a la base de datos DuckDB.
+
+| Prueba automatizada | Validación realizada |
+|---|---|
+| `test_calendario_sin_fechas_duplicadas` | Verifica que la dimensión calendario no contenga fechas duplicadas. |
+| `test_porcentaje_aportes_hidricos_correcto` | Comprueba la consistencia del cálculo del porcentaje de aportes hídricos frente a su referencia histórica. |
+| `test_clima_sin_duplicados_por_mes_municipio` | Verifica que los indicadores climáticos mensuales no presenten registros duplicados para una misma combinación de mes y municipio. |
+
+Estas pruebas complementan las validaciones implementadas en las Evidencias 1 y 2, ampliando la cobertura sobre los modelos analíticos utilizados por el dashboard.
+
+#### Ejecución de las pruebas
+
+Para ejecutar todas las pruebas automatizadas desde la raíz del repositorio:
+
+```powershell
+python -m pytest -v
+```
+
+**Resultado de la validación local de la Evidencia 3:**
+
+| Indicador | Resultado |
+|---|---:|
+| Pruebas pytest aprobadas | 30 |
+| Pruebas nuevas EA3 | 3 |
+| Pruebas fallidas | 0 |
+| Tiempo aproximado de ejecución | 17,88 segundos |
+
+Las 30 pruebas se ejecutaron satisfactoriamente en el entorno local de desarrollo.
+
+#### 📸 Evidencia de ejecución de pytest — EA3
+
+La ejecución de `python -m pytest -v` finalizó con 30 pruebas aprobadas y cero fallidas, incluyendo las tres nuevas validaciones de calidad de la Evidencia 3.
+
+![EA3 - Ejecución de pruebas automatizadas con pytest](docs/evidencias/ea3_pytest.png)
+
+#### Integración con GitHub Actions
+
+El workflow `.github/workflows/pipeline.yml` incorpora la ejecución de pytest después de construir y validar la capa oro mediante dbt.
+
+El proceso automatizado ejecuta las siguientes validaciones:
+
+1. Controles de limpieza y estructura de los datos con Pandera durante la transformación de la capa plata.
+2. Pruebas de integridad, unicidad, obligatoriedad y relaciones mediante `dbt build`.
+3. Ejecución de la batería de pruebas Python mediante pytest.
+4. Publicación del reporte de calidad como artefacto de GitHub Actions.
+
+La integración de estas verificaciones permite detectar errores de procesamiento y evitar que una ejecución con pruebas fallidas se considere satisfactoria.
+
+#### 📸 Evidencia de pruebas automatizadas en GitHub Actions
+
+La ejecución del workflow `pipeline-observatorio` permitió verificar satisfactoriamente las 30 pruebas automatizadas, incluyendo las tres nuevas pruebas de calidad desarrolladas durante la Evidencia 3.
+
+**Resultado:** 30 pruebas aprobadas y cero fallidas.
+
+![EA3 - Pruebas automatizadas en GitHub Actions](docs/evidencias/ea3_actions_pytest.png)
+
+#### Evidencias de calidad
+
+El código de las nuevas pruebas se encuentra en [`tests/test_calidad_ea3.py`](tests/test_calidad_ea3.py).
+
+La ejecución automatizada del pipeline y sus resultados pueden consultarse en [GitHub Actions — pipeline-observatorio](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/actions/workflows/pipeline.yml).
+
+Los controles implementados contribuyen a mantener la confiabilidad de la información utilizada para los indicadores energéticos, hídricos, climáticos y comerciales del observatorio.
+
+
+### 📈 4. Dashboard interactivo en Streamlit
+
+Durante la Evidencia 3 se desarrolló un dashboard interactivo utilizando **Streamlit**, **Python** y **Pandas**, con el propósito de visualizar los indicadores energéticos, hídricos, climáticos y comerciales del Observatorio de Energía y Clima.
+
+La aplicación consulta los archivos Parquet generados desde la capa oro y presenta seis análisis de negocio que apoyan la interpretación de los datos y la toma de decisiones de la gerencia de EnerAndes.
+
+#### Preguntas de negocio
+
+| N.º | Pregunta de negocio | Indicadores y visualizaciones |
+|---|---|---|
+| 1 | ¿Cómo cambia el nivel de los embalses durante las diferentes fases de El Niño y La Niña? | Nivel promedio de embalses (%), registros analizados y evolución histórica. |
+| 2 | ¿Cómo se comportan los aportes hídricos frente a su media histórica durante El Niño y La Niña? | Porcentaje de aportes respecto a la media histórica y evolución diaria. |
+| 3 | ¿Cómo evolucionan los precios de bolsa y la demanda eléctrica durante las diferentes fases ENSO? | Precio promedio de bolsa, evolución mensual de precios y demanda eléctrica. |
+| 4 | ¿Qué fuentes energéticas aportan más a la generación eléctrica y cómo cambia su participación en el tiempo? | Participación porcentual por fuente energética y evolución mensual de generación. |
+| 5 | ¿Cómo varían la temperatura y la precipitación entre municipios y fases ENSO? | Temperatura media, precipitación media y comparaciones por municipio. |
+| 6 | ¿Cómo evolucionan las ventas de energía y los ingresos según el segmento, municipio y tipo de compra? | Energía vendida (kWh), ingresos (COP), ventas por segmento y tipo de compra. |
+
+#### Filtros interactivos
+
+El dashboard permite explorar la información mediante los siguientes filtros:
+
+| Filtro | Funcionalidad |
+|---|---|
+| Período de análisis | Seleccionar un rango de fechas disponible en la dimensión calendario. |
+| Fase ENSO | Filtrar información según las fases de El Niño, La Niña y Neutral, de acuerdo con los datos disponibles. |
+| Municipios (código DANE) | Seleccionar municipios para los análisis climáticos. |
+| Segmento de clientes | Filtrar los indicadores comerciales según el segmento de EnerAndes. |
+| Municipios EnerAndes | Analizar los resultados comerciales por municipio. |
+
+Los filtros se aplican a las visualizaciones correspondientes según la información y las dimensiones disponibles para cada análisis.
+
+#### Fuentes y modelos utilizados
+
+El dashboard integra datos de XM, IDEAM, NOAA y EnerAndes, procesados mediante el modelo analítico de la capa oro.
+
+Entre las principales tablas utilizadas se encuentran:
+
+- `fact_indicadores_hidricos`: indicadores de embalses y aportes hídricos.
+- `fact_mercado_mensual`: información mensual de precios y demanda.
+- `fact_generacion_mensual`: generación eléctrica por recurso y período.
+- `fact_clima_mensual`: temperatura y precipitación por municipio.
+- `fact_ventas_mensual`: ventas de energía e ingresos comerciales.
+- `dim_fecha`: calendario y clasificación ENSO.
+- `dim_recurso`: clasificación de recursos y fuentes energéticas.
+- `dim_municipio` y `dim_segmento`: dimensiones para los análisis comerciales.
+
+#### Ejecución del dashboard
+
+Desde la raíz del repositorio, con el entorno virtual activado y las dependencias instaladas, ejecutar:
+
+```powershell
+dbt build --project-dir dbt --profiles-dir dbt
+python -m src.exportar_oro
+streamlit run dashboard/app.py
+```
+
+La aplicación utiliza los archivos Parquet almacenados en `data/gold/`. Estos archivos deben estar disponibles antes de iniciar Streamlit.
+
+**Código fuente:** [Dashboard del Observatorio de Energía y Clima](https://github.com/SernaSol/pi4-observatorio-energia-grpo-2/tree/main/dashboard).
+
+#### Interpretación de los resultados
+
+Los indicadores permiten identificar tendencias en el comportamiento de los recursos hídricos, los precios de la electricidad, la composición de la generación, las condiciones climáticas y el desempeño comercial de EnerAndes.
+
+Las asociaciones observadas entre variables climáticas, energéticas y comerciales se presentan como análisis descriptivos y no como relaciones causales comprobadas.
+
+Las visualizaciones constituyen la base para los hallazgos y recomendaciones del informe final dirigido a la gerencia de EnerAndes.
+
+
+#### 📸 Evidencias del dashboard — EA3
+
+Las siguientes capturas muestran el funcionamiento del dashboard interactivo desarrollado en Streamlit y las seis preguntas de negocio del Observatorio de Energía y Clima.
+
+**Vista general del dashboard y filtros interactivos**
+
+![Vista general del dashboard](docs/evidencias/ea3_dashboard_general.png)
+
+**1. Embalses y aportes hídricos**
+
+![Indicadores hídricos y fenómeno ENSO](docs/evidencias/ea3_dashboard_hidricos.png)
+
+**2. Precios de bolsa y demanda eléctrica**
+
+![Precios de energía y demanda](docs/evidencias/ea3_dashboard_mercado.png)
+
+**3. Generación por fuente energética**
+
+![Generación de energía](docs/evidencias/ea3_dashboard_generacion.png)
+
+**4. Clima por municipio**
+
+![Indicadores climáticos](docs/evidencias/ea3_dashboard_clima.png)
+
+**5. Ventas e ingresos de EnerAndes**
+
+![Comportamiento comercial de EnerAndes](docs/evidencias/ea3_dashboard_ventas.png)
+
+### 📊 5. Hallazgos principales y recomendaciones para EnerAndes
+
+El Observatorio de Energía y Clima integra información histórica del mercado eléctrico colombiano, los recursos hídricos, las condiciones climáticas y las ventas de EnerAndes. Los indicadores del dashboard permiten realizar seis análisis complementarios para apoyar la toma de decisiones gerenciales.
+
+#### 1. Niveles de embalses y fenómeno ENSO
+
+El análisis presenta la evolución histórica del nivel de los embalses y permite comparar su comportamiento durante las diferentes fases del fenómeno ENSO.
+
+**Recomendación:** incorporar el seguimiento de los niveles de embalses a los indicadores de riesgo de abastecimiento energético, especialmente durante períodos asociados con condiciones climáticas secas.
+
+#### 2. Aportes hídricos frente a la media histórica
+
+La comparación de los aportes hídricos con su media histórica permite identificar períodos en los que la disponibilidad de agua se encuentra por encima o por debajo de los valores de referencia. Un indicador del 100 % representa aportes equivalentes a la media histórica.
+
+**Recomendación:** establecer alertas de seguimiento cuando los aportes se mantengan por debajo de su referencia histórica, para anticipar posibles riesgos asociados con la disponibilidad hídrica.
+
+#### 3. Precios de bolsa y demanda eléctrica
+
+Los análisis históricos de EA2 identificaron diferencias entre los precios promedio de bolsa durante distintas fases ENSO. En 2026, el precio promedio registrado durante El Niño fue de 697,38, frente a 208,03 durante la fase Neutral, según los períodos disponibles en esa entrega.
+
+Estas diferencias representan asociaciones descriptivas y no demuestran que el fenómeno ENSO sea la causa directa de las variaciones de precios.
+
+**Recomendación:** monitorear conjuntamente los precios de bolsa, la demanda y las condiciones climáticas para apoyar la planeación de compras de energía y la evaluación de exposición a la volatilidad del mercado.
+
+#### 4. Generación eléctrica por fuente energética
+
+El análisis de EA2 identificó que la generación asociada al agua ocupó la primera posición entre las fuentes energéticas durante 2025 y 2026.
+
+El dashboard de EA3 amplía este análisis mediante visualizaciones de participación porcentual y evolución mensual de la generación por fuente.
+
+**Recomendación:** incorporar indicadores de diversificación de fuentes energéticas y analizar la dependencia de la generación hídrica frente a posibles cambios en las condiciones climáticas.
+
+#### 5. Temperatura y precipitación por municipio
+
+La integración de información del IDEAM permite comparar los promedios de temperatura y precipitación entre municipios y períodos, utilizando los filtros de fecha, municipio y fase ENSO.
+
+La cobertura de los datos depende de la disponibilidad de información publicada por las estaciones meteorológicas.
+
+**Recomendación:** realizar seguimiento de los municipios con condiciones climáticas relevantes para la operación y utilizar los indicadores disponibles como apoyo para la identificación de riesgos territoriales.
+
+#### 6. Ventas e ingresos de EnerAndes
+
+Los análisis de EA2 identificaron a Medellín entre los municipios con mayores ventas de energía, destacándose los segmentos residencial, industrial y comercial.
+
+El dashboard de EA3 incorpora filtros por municipio, segmento, tipo de compra y período de análisis, permitiendo profundizar en el comportamiento comercial.
+
+**Recomendación:** priorizar el seguimiento de los segmentos y municipios con mayor participación en las ventas, analizar sus variaciones mensuales y evaluar estrategias de contratación de energía según la exposición comercial de EnerAndes.
+
+#### Consideraciones para la toma de decisiones
+
+Los hallazgos se interpretan considerando las diferencias de cobertura temporal entre las fuentes, la disponibilidad de datos y las unidades de medida de cada indicador.
+
+Las relaciones observadas entre variables climáticas, hídricas, energéticas y comerciales son descriptivas. Las decisiones de inversión, contratación o abastecimiento requieren complementar estos resultados con análisis financieros, operativos y de riesgo.
+
+El desarrollo completo de las seis preguntas de negocio, sus visualizaciones y las recomendaciones para la gerencia se presenta en el [informe final del Observatorio de Energía y Clima](docs/informe_final.pdf).
+
+
+### 📚 6. Reproducibilidad, uso de inteligencia artificial y limitaciones
+
+#### Reproducibilidad del proyecto
+
+El Observatorio de Energía y Clima puede ejecutarse en un entorno de desarrollo con Python 3.11 o superior, las dependencias declaradas en `requirements.txt` y los archivos de entrada requeridos.
+
+Desde la raíz del proyecto, con el entorno virtual activado, la ejecución completa se realiza mediante los siguientes comandos:
+
+```powershell
+python -m src.pipeline
+python -m src.transformar
+dbt build --project-dir dbt --profiles-dir dbt
+python -m pytest -v
+python -m src.exportar_oro
+streamlit run dashboard/app.py
+```
+
+La extracción depende de la disponibilidad de las fuentes externas y del archivo Excel de EnerAndes. Los archivos generados en las capas bronce, plata y oro se reconstruyen durante la ejecución.
+
+El workflow de GitHub Actions automatiza este procedimiento, ejecuta las validaciones y publica los resultados de la capa oro como artefactos descargables.
+
+#### Uso de inteligencia artificial
+
+Durante el desarrollo de la Evidencia 3 se utilizó **ChatGPT de OpenAI** como herramienta de apoyo para:
+
+- Revisar la configuración del workflow de GitHub Actions.
+- Apoyar el análisis de errores y la depuración de scripts.
+- Organizar la documentación técnica y los resultados de validación.
+- Apoyar la interpretación y presentación de indicadores de negocio.
+
+El código, las pruebas, las ejecuciones y los resultados fueron revisados por los integrantes del equipo mediante las herramientas de desarrollo utilizadas.
+
+#### Limitaciones del observatorio
+
+- **Disponibilidad de las fuentes:** los procesos de extracción dependen de las API de XM, IDEAM y DANE, así como de la publicación de datos de NOAA.
+- **Dependencia de insumos:** la reproducción completa requiere disponer del archivo Excel de EnerAndes.
+- **Cobertura temporal:** las fuentes presentan distintos períodos de disponibilidad, por lo que las comparaciones deben considerar los intervalos efectivamente observados.
+- **Calidad de datos:** los registros rechazados se conservan en cuarentena y algunos recursos históricos de XM no cuentan con clasificación completa.
+- **Unidades de medida:** determinadas métricas energéticas requieren validación de sus unidades originales antes de realizar conversiones.
+- **Interpretación estadística:** las asociaciones observadas entre clima, embalses, generación, precios y ventas no demuestran relaciones causales.
+- **Ejecución del dashboard:** la aplicación Streamlit requiere disponer previamente de los archivos Parquet exportados desde la capa oro.
+
+
+Estas consideraciones delimitan el alcance del observatorio y permiten interpretar sus resultados de forma responsable.
 
 ---
 ## 🤝 INFORMACIÓN COMPLEMENTARIA

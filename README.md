@@ -940,7 +940,7 @@ Los hallazgos se interpretan considerando las diferencias de cobertura temporal 
 
 Las relaciones observadas entre variables climáticas, hídricas, energéticas y comerciales son descriptivas. Las decisiones de inversión, contratación o abastecimiento requieren complementar estos resultados con análisis financieros, operativos y de riesgo.
 
-El desarrollo completo de las seis preguntas de negocio, sus visualizaciones y las recomendaciones para la gerencia se presenta en el [informe final del Observatorio de Energía y Clima](docs/informe_final.pdf).
+El desarrollo completo de las seis preguntas de negocio, sus visualizaciones y las recomendaciones para la gerencia se presenta en el [Informe final del Observatorio de Energía y Clima](docs/informe_final.pdf).
 
 
 ### 📚 6. Reproducibilidad, uso de inteligencia artificial y limitaciones

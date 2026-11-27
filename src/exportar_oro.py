@@ -20,7 +20,28 @@ from src.utils import log   # log: escribe un mensaje con la hora al inicio
  
 # Lista con los nombres de las tablas del esquema estrella que crea dbt
 # (los archivos .sql de dbt/models/marts/). Se exporta una por una
-TABLAS_ORO = ["dim_mes", "dim_municipio", "dim_segmento", "fact_ventas_mensual"]
+
+# Tablas de la capa oro: Evidencias 2 y 3
+TABLAS_ORO = [
+    # Dimensiones
+    "dim_fecha",
+    "dim_mes",
+    "dim_municipio",
+    "dim_recurso",
+    "dim_segmento",
+
+    # Hechos de las evidencias anteriores
+    "fact_ventas_mensual",
+    "fact_mercado_horario",
+    "fact_generacion_recurso",
+
+    # Indicadores agregados para la Evidencia 3
+    "fact_mercado_mensual",
+    "fact_generacion_mensual",
+    "fact_indicadores_hidricos",
+    "fact_clima_mensual",
+]
+
  
  
 # ---------------------------------------------------------------------------

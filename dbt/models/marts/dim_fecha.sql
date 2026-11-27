@@ -5,13 +5,21 @@
 
 with limites as (
     select
-        min(cast(periodo || '-01' as date)) as fecha_inicio,
+        least(
+            min(cast(periodo || '-01' as date)),
+            (select min(cast(fecha as date))
+             from {{ source('plata', 'xm_embalses') }}),
+            (select min(cast(fecha as date))
+             from {{ source('plata', 'xm_aportes_hidricos') }})
+        ) as fecha_inicio,
         greatest(
             max(last_day(cast(periodo || '-01' as date))),
-            (
-                select max(cast(fecha as date))
-                from {{ source('plata', 'xm_mercado_horario') }}
-            )
+            (select max(cast(fecha as date))
+             from {{ source('plata', 'xm_mercado_horario') }}),
+            (select max(cast(fecha as date))
+             from {{ source('plata', 'xm_embalses') }}),
+            (select max(cast(fecha as date))
+             from {{ source('plata', 'xm_aportes_hidricos') }})
         ) as fecha_fin
     from {{ ref('stg_ventas') }}
 ),

@@ -29,24 +29,42 @@ DIR_DOCS = RAIZ / "docs"                    # documentacion: perfilamiento, repo
 
 # --- Fuente 1: API de XM (mercado electrico) -------------------------------
 XM_URL = "https://servapibi.xm.com.co/{periodo}"   # periodo: hourly | daily | lists
-XM_MAX_DIAS = 30                                    # la API no acepta rangos mas largos
-XM_METRICAS = [
-    # Lista de tuplas. Cada tupla es una metrica a descargar:
-    # (MetricId, Entity, periodo, nombre del archivo en bronce)
+XM_MAX_DIAS = 30    
+# Fechas historicas para la Evidencia 3
+FECHA_HISTORIA = date(2015, 1, 1)
+FECHA_PRECIO = date(2023, 1, 1)                                # la API no acepta rangos mas largos
 
-      # Precio de bolsa por hora
-    ("PrecBolsNaci", "Sistema", "hourly", "xm_precio_bolsa"),
-    # Demanda real por hora
-    ("DemaReal", "Sistema", "hourly", "xm_demanda"),
-    # Porcentaje de embalses por día
-    ("PorcVoluUtilDiar", "Sistema", "daily", "xm_embalses"),
-    # Generación por hora de cada planta
-    ("Gene", "Recurso", "hourly", "xm_generacion_recurso"),
-    # Aportes hídricos por día
-    ("AporEner", "Sistema", "daily", "xm_aportes_hidricos"),
-    # Catálogo de plantas, sin rango de fechas
-    ("ListadoRecursos", "Sistema", "lists", "xm_listado_recursos"),
+XM_METRICAS = [
+    # Precio de bolsa horario
+    ("PrecBolsNaci", "Sistema", "hourly", "xm_precio_bolsa", FECHA_INICIO),
+
+    # Demanda real horaria
+    ("DemaReal", "Sistema", "hourly", "xm_demanda", FECHA_INICIO),
+
+    # Embalses desde 2015
+    ("PorcVoluUtilDiar", "Sistema", "daily", "xm_embalses", FECHA_HISTORIA),
+
+    # Generacion por recurso
+    ("Gene", "Recurso", "hourly", "xm_generacion_recurso", FECHA_INICIO),
+
+    # Aportes hidricos
+    ("AporEner", "Sistema", "daily", "xm_aportes_hidricos", FECHA_PRECIO),
+
+    # Precio de bolsa diario
+    ("PPPrecBolsNaci", "Sistema", "daily", "xm_precio_bolsa_diario", FECHA_PRECIO),
+
+    # Precio promedio de contratos
+    ("PrecPromCont", "Sistema", "daily", "xm_precio_contrato", FECHA_PRECIO),
+
+    # Promedio historico de aportes
+    ("AporEnerMediHist", "Sistema", "daily", "xm_aportes_media", FECHA_PRECIO),
 ]
+
+# Catalogo de plantas de XM
+XM_LISTAS = [
+    ("ListadoRecursos", "Sistema", "xm_listado_recursos"),
+]
+
 
 # --- Fuente 2: IDEAM en datos.gov.co (API Socrata / SoQL) ------------------
 IDEAM_DEPARTAMENTO = "ANTIOQUIA"

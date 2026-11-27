@@ -29,3 +29,16 @@ sources:
 
       # DANE
       - name: dane_divipola
+  
+
+  # Fuentes adicionales para la Evidencia 3
+  - name: bronce
+    description: "Metricas historicas de XM para el dashboard"
+
+    meta:
+      external_location: "data/bronze/{name}.parquet"
+
+    tables:
+      - name: xm_precio_bolsa_diario
+      - name: xm_precio_contrato
+      - name: xm_aportes_media

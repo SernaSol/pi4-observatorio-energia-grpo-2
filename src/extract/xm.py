@@ -77,13 +77,13 @@ def extraer_lista(metrica: str, entidad: str, nombre: str, forzar: bool) -> None
     guardar_bronce(pd.DataFrame(filas), nombre, fuente="XM", origen=f"{url} MetricId={metrica}")
 
 
-def extraer_metrica(metrica: str, entidad: str, periodo: str, nombre: str, forzar: bool) -> None:
+def extraer_metrica(metrica: str, entidad: str, periodo: str, nombre: str, desde, forzar: bool) -> None:
     """Descarga una metrica de XM en ventanas de 30 dias y la guarda en bronce."""
     if ya_existe(nombre, forzar):                  # si el archivo ya esta en bronce...
         return                                     # ...termina aqui, sin descargar
     url = config.XM_URL.format(periodo=periodo)    # reemplaza {periodo} por hourly o daily
     filas = []                                     # aqui se juntan las filas de todas las ventanas
-    for inicio, fin in ventanas(config.FECHA_INICIO, config.FECHA_FIN, config.XM_MAX_DIAS):
+    for inicio, fin in ventanas(desde, config.FECHA_FIN, config.XM_MAX_DIAS):
         # cuerpo del pedido a la API de XM:
         # str(inicio) convierte la fecha en texto "2026-01-01", como la pide XM.
         cuerpo = {"MetricId": metrica, "Entity": entidad,
@@ -98,15 +98,28 @@ def extraer_metrica(metrica: str, entidad: str, periodo: str, nombre: str, forza
 
 
 def extraer(forzar: bool = False) -> None:
-    """Descarga todas las metricas de XM definidas en config.XM_METRICAS."""
+    """Descarga las metricas y listas definidas en config.py."""
     log("XM - API REST del mercado electrico")
-    # Cada elemento de XM_METRICAS es una tupla de 4 valores;
-    # el for la desempaca en 4 variables a la vez.
-    for metrica, entidad, periodo, nombre in config.XM_METRICAS:
-        if periodo == "lists":                     
-            extraer_lista(metrica, entidad, nombre, forzar) # catalogo: otra forma de pedir
-        else:                                      
-            extraer_metrica(metrica, entidad, periodo, nombre, forzar) # serie de tiempo: por ventanas de 30 dias
+
+    # Metricas con fecha de inicio propia
+    for metrica, entidad, periodo, nombre, desde in config.XM_METRICAS:
+        extraer_metrica(
+            metrica,
+            entidad,
+            periodo,
+            nombre,
+            desde,
+            forzar,
+        )
+
+    # Catalogos sin rango de fechas
+    for metrica, entidad, nombre in config.XM_LISTAS:
+        extraer_lista(
+            metrica,
+            entidad,
+            nombre,
+            forzar,
+        )
 
 
 # ---------------------------------------------------------------------------
